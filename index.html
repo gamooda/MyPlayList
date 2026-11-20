@@ -452,8 +452,13 @@ elements.audio.crossOrigin = "anonymous";
 const browserDownloadSessions = new Map();
 let browserDownloadServicePromise = null;
 
+function supportsServiceWorkerDownloadInterception() {
+  if (window.__gitwaveForceBlobDownloads) return false;
+  return typeof window.NavigateEvent !== "undefined" && "downloadRequest" in window.NavigateEvent.prototype;
+}
+
 function initializeBrowserDownloadService() {
-  if (!("serviceWorker" in navigator) || !window.isSecureContext) return Promise.resolve(false);
+  if (!("serviceWorker" in navigator) || !window.isSecureContext || !supportsServiceWorkerDownloadInterception()) return Promise.resolve(false);
   if (browserDownloadServicePromise) return browserDownloadServicePromise;
   browserDownloadServicePromise = navigator.serviceWorker.register(new URL("./gitwave-download-sw.js", location.href).href, {
     scope: new URL("./", location.href).pathname,
@@ -478,7 +483,7 @@ function initializeBrowserDownloadService() {
 }
 
 function createBrowserDownloadSession(fileName, mime) {
-  if (!navigator.serviceWorker || !navigator.serviceWorker.controller) return null;
+  if (!supportsServiceWorkerDownloadInterception() || !navigator.serviceWorker || !navigator.serviceWorker.controller) return null;
   const id = "gw" + Date.now().toString(36) + Math.random().toString(36).slice(2);
   let port = null;
   let aborted = false;
