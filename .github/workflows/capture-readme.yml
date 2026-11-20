@@ -236,7 +236,16 @@ jobs:
               if (!(await page.locator('#downloadSelectedBtn').isDisabled())) throw new Error('Track selection did not clear');
               await page.waitForFunction(() => Boolean(navigator.serviceWorker?.controller), null, { timeout: 30000 });
               const inspectDownload = async download => {
-                const filePath = await download.path();
+                const filePath = await new Promise((resolve, reject) => {
+                  const timer = setTimeout(() => reject(new Error('Browser download did not finish within 30 seconds: ' + download.suggestedFilename())), 30000);
+                  download.path().then(path => {
+                    clearTimeout(timer);
+                    resolve(path);
+                  }, error => {
+                    clearTimeout(timer);
+                    reject(error);
+                  });
+                });
                 if (!filePath) throw new Error('Browser download has no temporary file');
                 const bytes = fs.readFileSync(filePath);
                 let endOffset = -1;
