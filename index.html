@@ -1155,6 +1155,15 @@ function mediaUrls(filePath, downloadUrl = "", version = "") {
   return { url: cdn, fallbackUrl: fallback && fallback !== cdn ? fallback : "" };
 }
 
+function imageMediaUrls(filePath, downloadUrl = "", version = "") {
+  const appendVersion = url => url && version ? `${url}${url.includes("?") ? "&" : "?"}v=${encodeURIComponent(version)}` : url;
+  if (!repositoryBranch || !repository) return { url: appendVersion(downloadUrl || rawFallbackPath(filePath)), fallbackUrl: "" };
+  const safePath = String(filePath).split("/").map(encodeURIComponent).join("/");
+  const raw = appendVersion(`https://raw.githubusercontent.com/${encodeURIComponent(repository.owner)}/${encodeURIComponent(repository.repo)}/${encodeURIComponent(repositoryBranch)}/${safePath}`);
+  const cdn = appendVersion(`https://cdn.jsdelivr.net/gh/${encodeURIComponent(repository.owner)}/${encodeURIComponent(repository.repo)}@${encodeURIComponent(repositoryBranch)}/${safePath}`);
+  return { url: raw, fallbackUrl: cdn };
+}
+
 function findNamedPng(files, name) {
   return files.find(file => file.type === "file" && file.name.toLowerCase() === `${name}.png`) || null;
 }
@@ -1247,9 +1256,9 @@ function makeAlbumRecord(directoryName, directoryPath, files) {
   const background = findNamedPng(files, "background");
   const logo = findNamedPng(files, "logo");
   const tracks = files.filter(file => file.type === "file" && /\.(mp3|ogg|wav)$/i.test(file.name)).sort((a, b) => a.name.localeCompare(b.name, "ru", { numeric: true, sensitivity: "base" })).map(makeTrackRecord);
-  const coverMedia = preview ? mediaUrls(preview.path, preview.download_url || "", preview.sha || "") : { url: "", fallbackUrl: "" };
-  const backgroundMedia = background ? mediaUrls(background.path, background.download_url || "", background.sha || "") : { url: "", fallbackUrl: "" };
-  const logoMedia = logo ? mediaUrls(logo.path, logo.download_url || "", logo.sha || "") : { url: "", fallbackUrl: "" };
+  const coverMedia = preview ? imageMediaUrls(preview.path, preview.download_url || "", preview.sha || "") : { url: "", fallbackUrl: "" };
+  const backgroundMedia = background ? imageMediaUrls(background.path, background.download_url || "", background.sha || "") : { url: "", fallbackUrl: "" };
+  const logoMedia = logo ? imageMediaUrls(logo.path, logo.download_url || "", logo.sha || "") : { url: "", fallbackUrl: "" };
   return {
     id: directoryPath,
     folder: directoryName,
@@ -1269,12 +1278,12 @@ function setBrandAssetsFromFiles(files) {
   const gitwave = files.find(file => file.type === "file" && file.name.toLowerCase() === "gitwave.svg");
   const allTracksIcon = files.find(file => file.type === "file" && file.name.toLowerCase() === "all_tracks.svg") || files.find(file => file.type === "file" && file.name.toLowerCase() === "all_tacks.svg");
   if (gitwave) {
-    const media = mediaUrls(gitwave.path, gitwave.download_url || "", gitwave.sha || "");
+    const media = imageMediaUrls(gitwave.path, gitwave.download_url || "", gitwave.sha || "");
     repositoryAssets.gitwave = media.url;
     repositoryAssets.gitwaveFallback = media.fallbackUrl;
   }
   if (allTracksIcon) {
-    const media = mediaUrls(allTracksIcon.path, allTracksIcon.download_url || "", allTracksIcon.sha || "");
+    const media = imageMediaUrls(allTracksIcon.path, allTracksIcon.download_url || "", allTracksIcon.sha || "");
     repositoryAssets.allTracksIcon = media.url;
     repositoryAssets.allTracksIconFallback = media.fallbackUrl;
   }
@@ -1314,12 +1323,12 @@ function assetsFromRootFiles(files) {
   const rootBackground = findNamedPng(files, "background");
   const rootLogo = findNamedPng(files, "logo");
   if (rootBackground) {
-    const media = mediaUrls(rootBackground.path, rootBackground.download_url || "", rootBackground.sha || "");
+    const media = imageMediaUrls(rootBackground.path, rootBackground.download_url || "", rootBackground.sha || "");
     repositoryAssets.background = media.url;
     repositoryAssets.backgroundFallback = media.fallbackUrl;
   }
   if (rootLogo) {
-    const media = mediaUrls(rootLogo.path, rootLogo.download_url || "", rootLogo.sha || "");
+    const media = imageMediaUrls(rootLogo.path, rootLogo.download_url || "", rootLogo.sha || "");
     repositoryAssets.logo = media.url;
     repositoryAssets.logoFallback = media.fallbackUrl;
   }
@@ -1346,7 +1355,7 @@ async function scanMusicWithTree(treeData) {
     if (!repositoryAssets.background) {
       const file = findNamedPng(fallbackAssets, "background");
       if (file) {
-        const media = mediaUrls(file.path, "", file.sha || "");
+        const media = imageMediaUrls(file.path, "", file.sha || "");
         repositoryAssets.background = media.url;
         repositoryAssets.backgroundFallback = media.fallbackUrl;
       }
@@ -1354,7 +1363,7 @@ async function scanMusicWithTree(treeData) {
     if (!repositoryAssets.logo) {
       const file = findNamedPng(fallbackAssets, "logo");
       if (file) {
-        const media = mediaUrls(file.path, "", file.sha || "");
+        const media = imageMediaUrls(file.path, "", file.sha || "");
         repositoryAssets.logo = media.url;
         repositoryAssets.logoFallback = media.fallbackUrl;
       }
@@ -1493,9 +1502,9 @@ function refreshAlbumMediaFromTree(albumList, tree) {
     const preview = previews[0];
     const background = findNamedPng(contents, "background");
     const logo = findNamedPng(contents, "logo");
-    const coverMedia = preview ? mediaUrls(preview.path, "", preview.sha) : { url: "", fallbackUrl: "" };
-    const backgroundMedia = background ? mediaUrls(background.path, "", background.sha) : { url: "", fallbackUrl: "" };
-    const logoMedia = logo ? mediaUrls(logo.path, "", logo.sha) : { url: "", fallbackUrl: "" };
+    const coverMedia = preview ? imageMediaUrls(preview.path, "", preview.sha) : { url: "", fallbackUrl: "" };
+    const backgroundMedia = background ? imageMediaUrls(background.path, "", background.sha) : { url: "", fallbackUrl: "" };
+    const logoMedia = logo ? imageMediaUrls(logo.path, "", logo.sha) : { url: "", fallbackUrl: "" };
     album.cover = coverMedia.url;
     album.coverFallback = coverMedia.fallbackUrl;
     album.background = backgroundMedia.url;
