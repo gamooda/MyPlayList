@@ -85,6 +85,37 @@ jobs:
             const browser = await chromium.launch({ headless: true });
             const context = await browser.newContext({ viewport: { width: 1280, height: 800 }, deviceScaleFactor: 1, acceptDownloads: true });
             const page = await context.newPage();
+            await page.addInitScript(() => {
+              const state = { options: null, chunks: [], bytes: null, completed: false };
+              Object.defineProperty(window, "showSaveFilePicker", {
+                configurable: true,
+                value: async options => {
+                  state.options = options;
+                  state.chunks = [];
+                  state.bytes = null;
+                  state.completed = false;
+                  return {
+                    createWritable: async () => new WritableStream({
+                      async write(chunk) {
+                        state.chunks.push(new Uint8Array(await chunk.arrayBuffer()));
+                      },
+                      close() {
+                        const size = state.chunks.reduce((sum, part) => sum + part.length, 0);
+                        const result = new Uint8Array(size);
+                        let offset = 0;
+                        for (const part of state.chunks) {
+                          result.set(part, offset);
+                          offset += part.length;
+                        }
+                        state.bytes = result;
+                        state.completed = true;
+                      }
+                    })
+                  };
+                }
+              });
+              Object.defineProperty(window, "__gitwaveSaveAsTest", { configurable: true, value: state });
+            });
             const fs = require('node:fs');
             const pageErrors = [];
             page.setDefaultTimeout(45000);
@@ -211,22 +242,33 @@ jobs:
             if (smallestAlbum) {
               await page.locator('#albumGrid .album-card:not([data-album-id="__all_tracks__"])').nth(smallestAlbum.index).click();
               await page.locator('#playlistOverlay.open').waitFor({ state: 'visible', timeout: 30000 });
-              const downloadPromise = page.waitForEvent('download', { timeout: 180000 });
               await page.locator('#downloadZipBtn').click();
-              const download = await downloadPromise;
-              const zipPath = await download.path();
-              if (!zipPath) throw new Error('ZIP download has no file path');
-              const archive = fs.readFileSync(zipPath);
-              if (archive.length < 22 || archive.readUInt32LE(0) !== 0x04034b50) throw new Error('Downloaded archive has an invalid ZIP header');
-              let endOffset = -1;
-              for (let index = archive.length - 22; index >= Math.max(0, archive.length - 65558); index--) {
-                if (archive.readUInt32LE(index) === 0x06054b50) {
-                  endOffset = index;
-                  break;
+              await page.waitForFunction(() => window.__gitwaveSaveAsTest?.completed && window.__gitwaveSaveAsTest?.bytes?.length > 0, { timeout: 180000 });
+              const saved = await page.evaluate(() => {
+                const state = window.__gitwaveSaveAsTest;
+                const bytes = state.bytes;
+                const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+                let endOffset = -1;
+                for (let index = bytes.length - 22; index >= Math.max(0, bytes.length - 65558); index--) {
+                  if (view.getUint32(index, true) === 0x06054b50) {
+                    endOffset = index;
+                    break;
+                  }
                 }
-              }
-              if (endOffset < 0 || archive.readUInt16LE(endOffset + 10) !== smallestAlbum.count) throw new Error('ZIP archive entry count does not match the selected album');
-              console.log('Verified ZIP archive:', download.suggestedFilename(), archive.length, 'bytes,', smallestAlbum.count, 'track(s)');
+                return {
+                  fileName: state.options?.suggestedName || '',
+                  mime: state.options?.types?.[0]?.accept?.['application/zip'] || [],
+                  size: bytes.length,
+                  header: bytes.length >= 4 ? view.getUint32(0, true) : 0,
+                  endSignature: endOffset >= 0 ? view.getUint32(endOffset, true) : 0,
+                  entries: endOffset >= 0 ? view.getUint16(endOffset + 10, true) : 0
+                };
+              });
+              if (!saved.fileName.endsWith('.zip')) throw new Error('Save As picker did not suggest a ZIP filename: ' + saved.fileName);
+              if (!saved.mime.includes('.zip')) throw new Error('Save As picker did not register ZIP file type');
+              if (saved.header !== 0x04034b50 || saved.endSignature !== 0x06054b50) throw new Error('Saved ZIP archive has invalid headers');
+              if (saved.entries !== smallestAlbum.count) throw new Error('ZIP archive entry count does not match selected album');
+              console.log('Verified Save As ZIP:', saved.fileName, saved.size, 'bytes,', saved.entries, 'track(s)');
             }
             await browser.close();
           })().catch(error => {
