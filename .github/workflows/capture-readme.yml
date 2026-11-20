@@ -85,41 +85,13 @@ jobs:
             const browser = await chromium.launch({ headless: true });
             const context = await browser.newContext({ viewport: { width: 1280, height: 800 }, deviceScaleFactor: 1, acceptDownloads: true });
             const page = await context.newPage();
-            await page.addInitScript(() => {
-              const state = { options: null, chunks: [], bytes: null, completed: false };
-              Object.defineProperty(window, "showSaveFilePicker", {
-                configurable: true,
-                value: async options => {
-                  state.options = options;
-                  state.chunks = [];
-                  state.bytes = null;
-                  state.completed = false;
-                  return {
-                    createWritable: async () => new WritableStream({
-                      async write(chunk) {
-                        state.chunks.push(new Uint8Array(await chunk.arrayBuffer()));
-                      },
-                      close() {
-                        const size = state.chunks.reduce((sum, part) => sum + part.length, 0);
-                        const result = new Uint8Array(size);
-                        let offset = 0;
-                        for (const part of state.chunks) {
-                          result.set(part, offset);
-                          offset += part.length;
-                        }
-                        state.bytes = result;
-                        state.completed = true;
-                      }
-                    })
-                  };
-                }
-              });
-              Object.defineProperty(window, "__gitwaveSaveAsTest", { configurable: true, value: state });
-            });
             const fs = require('node:fs');
             const pageErrors = [];
             page.setDefaultTimeout(45000);
             page.on('pageerror', error => pageErrors.push(String(error)));
+            page.on('response', response => {
+              if (response.status() >= 400) console.error('HTTP RESPONSE:', response.status(), response.url());
+            });
             page.on('console', message => {
               if (message.type() === 'error') console.error('PAGE CONSOLE:', message.text());
             });
@@ -131,7 +103,7 @@ jobs:
                 const grid = document.querySelector('#albumGrid');
                 const status = document.querySelector('#syncStatus');
                 return Boolean(grid && (grid.querySelector('.album-card') || status?.classList.contains('error')));
-              }, { timeout: 180000 }).catch(async () => {
+              }, null, { timeout: 180000 }).catch(async () => {
                 const state = await page.evaluate(() => ({
                   title: document.title,
                   url: location.href,
@@ -151,7 +123,7 @@ jobs:
             await page.waitForFunction(() => {
               const images = [...document.querySelectorAll('#albumGrid img')];
               return images.every(image => image.complete);
-            }, { timeout: 20000 }).catch(() => {});
+            }, null, { timeout: 20000 }).catch(() => {});
             let libraryFrame = 0;
             const captureLibrary = async (copies = 1) => {
               for (let i = 0; i < copies; i++) {
@@ -242,8 +214,58 @@ jobs:
             if (smallestAlbum) {
               await page.locator('#albumGrid .album-card:not([data-album-id="__all_tracks__"])').nth(smallestAlbum.index).click();
               await page.locator('#playlistOverlay.open').waitFor({ state: 'visible', timeout: 30000 });
+              await page.evaluate(() => {
+                const state = { options: null, chunks: [], bytes: null, completed: false };
+                Object.defineProperty(window, "showSaveFilePicker", {
+                  configurable: true,
+                  writable: true,
+                  value: async options => {
+                    state.options = options;
+                    state.chunks = [];
+                    state.bytes = null;
+                    state.completed = false;
+                    return {
+                      createWritable: async () => new WritableStream({
+                        write(chunk) {
+                          state.chunks.push(new Uint8Array(chunk));
+                        },
+                        close() {
+                          const size = state.chunks.reduce((sum, part) => sum + part.length, 0);
+                          const result = new Uint8Array(size);
+                          let offset = 0;
+                          for (const part of state.chunks) {
+                            result.set(part, offset);
+                            offset += part.length;
+                          }
+                          state.bytes = result;
+                          state.completed = true;
+                        },
+                        abort() {
+                          state.completed = false;
+                        }
+                      })
+                    };
+                  }
+                });
+                window.__gitwaveSaveAsTest = state;
+              });
+              const pickerReady = await page.evaluate(() => ({
+                picker: typeof window.showSaveFilePicker,
+                state: Boolean(window.__gitwaveSaveAsTest)
+              }));
+              if (pickerReady.picker !== 'function' || !pickerReady.state) throw new Error('Unable to install the Save As test dialog: ' + JSON.stringify(pickerReady));
               await page.locator('#downloadZipBtn').click();
-              await page.waitForFunction(() => window.__gitwaveSaveAsTest?.completed && window.__gitwaveSaveAsTest?.bytes?.length > 0, { timeout: 180000 });
+              await page.waitForFunction(() => Boolean(window.__gitwaveSaveAsTest?.options), null, { timeout: 10000 });
+              await page.waitForFunction(() => window.__gitwaveSaveAsTest?.completed && window.__gitwaveSaveAsTest?.bytes?.length > 0, null, { timeout: 180000 }).catch(async error => {
+                const state = await page.evaluate(() => ({
+                  options: window.__gitwaveSaveAsTest?.options,
+                  completed: window.__gitwaveSaveAsTest?.completed,
+                  bytes: window.__gitwaveSaveAsTest?.bytes?.length || 0,
+                  label: document.querySelector('#downloadZipLabel')?.textContent || '',
+                  errors: pageErrors
+                }));
+                throw new Error('ZIP Save As test did not finish: ' + JSON.stringify(state) + ' ' + error.message);
+              });
               const saved = await page.evaluate(() => {
                 const state = window.__gitwaveSaveAsTest;
                 const bytes = state.bytes;
