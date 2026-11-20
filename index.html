@@ -1080,12 +1080,30 @@ async function downloadAlbumZip(album) {
     showToast("В этом разделе нет треков для скачивания.", "error");
     return;
   }
+  const baseName = safeZipSegment(album.isAllTracks ? "GitWave - Все треки" : album.folder || album.title);
+  const suggestedName = baseName + ".zip";
   const token = ++zipDownloadToken;
   zipDownloadActive = true;
   elements.downloadZip.disabled = true;
   let completed = 0;
-  elements.downloadZipLabel.textContent = "Загрузка 0/" + album.tracks.length;
+  let saveHandlePromise = null;
+  elements.downloadZipLabel.textContent = "Выбор места…";
   try {
+    if (typeof window.showSaveFilePicker === "function") {
+      saveHandlePromise = window.showSaveFilePicker({
+        suggestedName,
+        types: [{
+          description: "ZIP-архив",
+          accept: { "application/zip": [".zip"] }
+        }],
+        excludeAcceptAllOption: false
+      });
+    }
+    let saveHandle = null;
+    if (saveHandlePromise) {
+      saveHandle = await saveHandlePromise;
+    }
+    elements.downloadZipLabel.textContent = "Загрузка 0/" + album.tracks.length;
     const entries = new Array(album.tracks.length);
     const failures = [];
     let cursor = 0;
@@ -1108,18 +1126,29 @@ async function downloadAlbumZip(album) {
     if (failures.length) throw new Error("Не удалось скачать " + failures.length + " трек(ов): " + failures[0].message);
     elements.downloadZipLabel.textContent = "Создание ZIP…";
     const archive = buildZipArchive(entries);
-    const url = URL.createObjectURL(archive);
-    const link = document.createElement("a");
-    const baseName = safeZipSegment(album.isAllTracks ? "GitWave - Все треки" : album.folder || album.title);
-    link.href = url;
-    link.download = baseName + ".zip";
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    setTimeout(() => URL.revokeObjectURL(url), 60000);
-    showToast("ZIP-архив готов: " + album.tracks.length + " трек(ов).", "success");
+    if (saveHandle) {
+      elements.downloadZipLabel.textContent = "Сохранение ZIP…";
+      const writable = await saveHandle.createWritable();
+      try {
+        await writable.write(archive);
+        await writable.close();
+      } catch (error) {
+        await writable.abort().catch(() => {});
+        throw error;
+      }
+    } else {
+      const url = URL.createObjectURL(archive);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = suggestedName;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 60000);
+    }
+    showToast("ZIP-архив сохранён: " + suggestedName, "success");
   } catch (error) {
-    showToast(error.message || "Не удалось создать ZIP-архив.", "error");
+    if (error && error.name !== "AbortError") showToast(error.message || "Не удалось сохранить ZIP-архив.", "error");
   } finally {
     if (token === zipDownloadToken) {
       zipDownloadActive = false;
