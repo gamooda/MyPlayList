@@ -49,6 +49,8 @@ body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;ba
 .search-box svg{width:17px;height:17px;flex:none;color:#85818f}
 .search-box input{width:100%;min-width:0;border:0;outline:0;background:transparent;color:var(--text);font-family:'Golos Text',sans-serif;font-size:13px;user-select:text}
 .search-box input::placeholder{color:#777783}
+.catalog-sort{height:42px;max-width:178px;min-width:145px;padding:0 30px 0 11px;border:1px solid rgba(63,63,70,.72);border-radius:9px;background:rgba(24,24,27,.72);color:#b9b9c2;font-size:11px;font-weight:700;cursor:pointer;outline:none;transition:border-color .2s,background .2s}
+.catalog-sort:focus{border-color:rgba(139,92,246,.75);background:rgba(24,24,27,.94)}
 .search-result-count{margin-left:auto;color:#777783;font-size:11px;font-weight:700;white-space:nowrap}
 .album-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(218px,1fr));gap:22px 18px;align-items:start;perspective:1500px;perspective-origin:50% 32%;transform-style:preserve-3d}
 .album-card{--album-rgb:132,138,148;--album-accent-rgb:76,83,94;position:relative;isolation:isolate;overflow:visible;min-width:0;padding:12px;border:1px solid rgba(var(--album-rgb),.2);border-radius:14px;background:linear-gradient(145deg,rgba(var(--album-rgb),.10),rgba(29,29,35,.94) 36%,rgba(20,20,24,.97));box-shadow:0 8px 24px rgba(0,0,0,.18),inset 0 1px 0 rgba(255,255,255,.035);cursor:pointer;animation:cardAppear .55s cubic-bezier(.2,.8,.2,1) both;transition:border-color .42s,box-shadow .5s,transform .5s cubic-bezier(.2,.8,.2,1);transform-style:preserve-3d}
@@ -132,6 +134,12 @@ body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;ba
 .download-zip-btn:hover:not(:disabled){transform:translateY(-1px);border-color:rgba(var(--active-rgb),.72);background:rgba(var(--active-rgb),.24)}
 .download-zip-btn:disabled{opacity:.55;cursor:wait}
 .download-zip-btn svg{width:15px;height:15px;flex:none;color:rgb(var(--active-rgb))}
+.download-progress{padding:11px 21px 12px;border-bottom:1px solid rgba(63,63,70,.45);background:rgba(9,9,11,.2)}
+.download-progress[hidden]{display:none}
+.download-progress-info{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:8px;color:#bfc1c8;font-family:'Golos Text',sans-serif;font-size:10px;font-variant-numeric:tabular-nums}
+.download-progress-info span:last-child{color:#858b95;text-align:right;white-space:nowrap}
+.download-progress-track{height:4px;overflow:hidden;border-radius:5px;background:rgba(255,255,255,.09)}
+.download-progress-track i{display:block;width:0;height:100%;border-radius:5px;background:linear-gradient(90deg,var(--active-main-color),#c4cad3);box-shadow:0 0 12px rgba(var(--active-rgb),.4);transition:width .25s ease}
 .close-playlist{width:32px;height:32px;display:grid;place-items:center;flex:none;border:1px solid rgba(63,63,70,.8);border-radius:8px;background:rgba(255,255,255,.04);color:#a1a1aa;cursor:pointer;transition:all .2s}
 .close-playlist:hover{background:rgba(239,68,68,.12);border-color:rgba(239,68,68,.4);color:#fca5a5}
 .close-playlist svg{width:16px;height:16px}
@@ -154,9 +162,10 @@ body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;ba
 .track-heading h3{font-size:14px;font-weight:800;letter-spacing:-.2px}
 .track-heading span{color:#777783;font-size:10px;font-weight:700}
 .track-list{min-height:0;overflow-y:auto;padding:7px 3px 5px 0;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:#333338 transparent}
-.track-row{position:relative;display:grid;grid-template-columns:28px minmax(0,1fr) 45px;align-items:center;gap:10px;min-height:54px;padding:7px 11px;border:1px solid transparent;border-radius:8px;color:#b4b2bd;cursor:pointer;transition:background .18s,border-color .18s,color .18s}
+.track-row{position:relative;display:grid;grid-template-columns:minmax(0,1fr) 45px 30px 30px;align-items:center;gap:7px;min-height:54px;padding:5px 8px 5px 10px;border:1px solid transparent;border-radius:8px;color:#b4b2bd;transition:background .18s,border-color .18s,color .18s}
 .track-row:hover{background:rgba(255,255,255,.045);color:#fff}
 .track-row.active{border-color:rgba(var(--active-rgb),.3);background:linear-gradient(90deg,rgba(var(--active-rgb),.18),rgba(var(--active-accent-rgb),.065));color:#fff}
+.track-play-area{display:grid;grid-template-columns:28px minmax(0,1fr);align-items:center;gap:10px;min-width:0;min-height:38px;padding:3px 0;border:0;background:transparent;color:inherit;text-align:left;cursor:pointer}
 .track-number{display:flex;align-items:center;justify-content:center;color:#686673;font-family:'Golos Text',sans-serif;font-size:10px;font-variant-numeric:tabular-nums}
 .track-row.active .track-number{color:rgb(var(--active-rgb))}
 .track-title-wrap{min-width:0;display:flex;flex-direction:column;gap:3px}
@@ -167,7 +176,17 @@ body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;ba
 .track-equalizer{width:38px;height:16px;display:none;align-self:center;overflow:visible}
 .track-row.active.is-playing .track-equalizer{display:block}
 .track-row.active.is-playing .track-number{display:none}
-.track-row.active.is-playing .track-equalizer{grid-column:1}
+.track-select-btn,.track-download-btn{width:28px;height:28px;display:grid;place-items:center;border:1px solid transparent;border-radius:7px;background:transparent;color:#777783;cursor:pointer;transition:background .18s,border-color .18s,color .18s}
+.track-select-btn svg,.track-download-btn svg{width:14px;height:14px;display:block}
+.track-select-btn:hover,.track-download-btn:hover{border-color:rgba(255,255,255,.12);background:rgba(255,255,255,.07);color:#e4e4e7}
+.track-select-btn[aria-pressed=true]{border-color:rgba(var(--active-rgb),.38);background:rgba(var(--active-rgb),.16);color:#d9dee6}
+.track-row.active .track-select-btn[aria-pressed=true]{color:rgb(var(--active-rgb))}
+.track-selection-toolbar{display:flex;align-items:center;gap:8px;padding:9px 3px 8px;border-bottom:1px solid rgba(63,63,70,.34)}
+.track-selection-toolbar span{flex:1;color:#85818f;font-size:9px;font-weight:700;text-align:right}
+.track-toolbar-btn,.track-toolbar-download{height:29px;padding:0 9px;border:1px solid rgba(63,63,70,.7);border-radius:7px;background:rgba(255,255,255,.035);color:#a1a1aa;font-size:9px;font-weight:800;white-space:nowrap;cursor:pointer;transition:all .18s}
+.track-toolbar-btn:hover,.track-toolbar-download:hover:not(:disabled){border-color:rgba(var(--active-rgb),.5);background:rgba(var(--active-rgb),.13);color:#fff}
+.track-toolbar-download{border-color:rgba(var(--active-rgb),.35);color:#d2d7df}
+.track-toolbar-download:disabled{opacity:.38;cursor:not-allowed}
 .track-empty{padding:30px 12px;color:#85818f;text-align:center;font-size:12px}
 .toast-container{position:fixed;z-index:500;top:18px;left:50%;display:flex;flex-direction:column;align-items:center;gap:8px;width:min(420px,calc(100vw - 28px));transform:translateX(-50%);pointer-events:none}
 .toast{display:flex;align-items:center;gap:10px;width:100%;padding:11px 14px;border:1px solid rgba(82,82,91,.75);border-radius:9px;background:rgba(30,30,40,.78);box-shadow:0 10px 30px rgba(0,0,0,.45);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);color:#f4f4f5;font-size:11px;font-weight:700;opacity:0;transform:translateY(-9px);transition:opacity .25s,transform .25s}
@@ -184,6 +203,7 @@ body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;ba
 .library-section{padding-top:0}
 .filterbar-meta .sync-status{order:2}
 .filterbar-meta .search-result-count{order:1}
+@media(max-width:680px){.catalog-sort{height:38px;min-width:0;max-width:none;flex:1}.filterbar{flex-wrap:wrap}.filterbar .search-box{flex:1 1 100%;width:100%}.filterbar-meta{order:3;width:100%;margin-left:0}.download-progress{padding:10px 14px}.track-selection-toolbar{gap:5px}.track-toolbar-btn,.track-toolbar-download{padding:0 7px;font-size:8px}.track-row{grid-template-columns:minmax(0,1fr) 38px 27px 27px;gap:4px;padding-left:6px;padding-right:5px}.track-play-area{grid-template-columns:23px minmax(0,1fr);gap:6px}.track-select-btn,.track-download-btn{width:26px;height:26px}}
 .album-card .album-cover[hidden]{display:none}
 .album-card .album-cover-placeholder[hidden]{display:none}
 .playlist-window{--active-border:rgba(var(--active-rgb),.28)}
@@ -315,7 +335,7 @@ body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;ba
 </div>
 </header>
 <main class="library-section">
-<div class="filterbar"><label class="search-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7.5"/><path d="m20 20-4-4"/></svg><input id="albumSearch" type="search" placeholder="Найти альбом или трек..." autocomplete="off" aria-label="Найти альбом или трек"></label><div class="filterbar-meta"><span class="search-result-count" id="searchCount"></span><div class="sync-status" id="syncStatus"><i class="status-dot"></i><span id="statusText">Подключение...</span></div></div><span class="album-count" id="albumCount">0</span></div>
+<div class="filterbar"><label class="search-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7.5"/><path d="m20 20-4-4"/></svg><input id="albumSearch" type="search" placeholder="Найти альбом или трек..." autocomplete="off" aria-label="Найти альбом или трек"></label><select class="catalog-sort" id="albumSort" aria-label="Сортировка альбомов"><option value="default">По умолчанию</option><option value="name">По названию</option><option value="tracks-desc">Больше треков</option><option value="tracks-asc">Меньше треков</option></select><div class="filterbar-meta"><span class="search-result-count" id="searchCount"></span><div class="sync-status" id="syncStatus"><i class="status-dot"></i><span id="statusText">Подключение...</span></div></div><span class="album-count" id="albumCount">0</span></div>
 <div class="global-track-results" id="globalTrackResults" hidden></div>
 <div class="album-grid" id="albumGrid"></div>
 <div class="empty-state" id="emptyState"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="24" cy="24" r="18"/><path d="M20 18v12l11-6-11-6Z"/><path d="M8 12 5 9m35 3 3-3M8 36l-3 3m35-3 3 3"/></svg><strong id="emptyTitle">Здесь пока тихо</strong><p id="emptyMessage">Не удалось загрузить музыкальную библиотеку.</p><button id="emptyRetry" type="button">Попробовать снова</button></div>
@@ -325,9 +345,10 @@ body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;ba
 <div class="playlist-scrim" id="playlistScrim"></div><div class="playlist-ambient" id="playlistAmbient"></div>
 <section class="playlist-window" role="dialog" aria-modal="true" aria-label="Плейлист альбома">
 <div class="playlist-topline"><div class="playlist-breadcrumb">GITWAVE <span>/</span> PLAYLIST</div><div class="playlist-topline-actions"><button class="download-zip-btn" id="downloadZipBtn" type="button" title="Скачать альбом в ZIP-архиве"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0 4-4m-4 4-4-4"/><path d="M4 16v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></svg><span id="downloadZipLabel">Скачать ZIP</span></button><button class="close-playlist" id="closePlaylist" type="button" aria-label="Закрыть плейлист"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m18 6-12 12M6 6l12 12"/></svg></button></div></div>
+<div class="download-progress" id="downloadProgress" hidden><div class="download-progress-info"><span id="downloadProgressText">Подготовка загрузки…</span><span id="downloadProgressStats">0 МБ/с · осталось —</span></div><div class="download-progress-track"><i id="downloadProgressFill"></i></div></div>
 <div class="playlist-body">
 <aside class="playlist-aside"><div class="playlist-cover-shell"><img class="playlist-cover" id="playlistCover" alt="Обложка альбома"><div class="all-cover-mosaic playlist-cover-mosaic" id="playlistCoverMosaic" hidden></div><div class="playlist-cover-placeholder" id="playlistCoverFallback"><svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2"><circle cx="32" cy="32" r="23"/><circle cx="32" cy="32" r="15"/><circle cx="32" cy="32" r="5" fill="currentColor" stroke="none"/></svg></div></div><h2 class="playlist-album-title" id="playlistAlbumTitle">Альбом</h2><p class="playlist-album-meta" id="playlistAlbumMeta">0 треков</p><div class="playlist-actions"><button class="play-all-btn" id="playAllBtn" type="button" aria-label="Слушать"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.5c0-.8.87-1.28 1.54-.85l10.2 6.5a1 1 0 0 1 0 1.7l-10.2 6.5A1 1 0 0 1 8 18.5v-13Z"/></svg><span>Слушать</span></button><button class="playlist-secondary" id="shuffleAlbumBtn" type="button">Перемешать</button></div></aside>
-<div class="playlist-right"><label class="playlist-search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7.5"/><path d="m20 20-4-4"/></svg><input id="playlistSearch" type="search" placeholder="Найти трек в этом альбоме..." autocomplete="off" aria-label="Найти трек в этом альбоме"></label><div class="track-heading"><h3>Треки альбома</h3><span id="trackCount">0 TRACKS</span></div><div class="track-list" id="trackList"></div></div>
+<div class="playlist-right"><label class="playlist-search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7.5"/><path d="m20 20-4-4"/></svg><input id="playlistSearch" type="search" placeholder="Найти трек в этом альбоме..." autocomplete="off" aria-label="Найти трек в этом альбоме"></label><div class="track-heading"><h3>Треки альбома</h3><span id="trackCount">0 TRACKS</span></div><div class="track-selection-toolbar"><button class="track-toolbar-btn" id="selectVisibleTracksBtn" type="button">Выбрать всё</button><span id="selectedTrackCount">0 выбрано</span><button class="track-toolbar-download" id="downloadSelectedBtn" type="button" disabled>ZIP выбранных</button></div><div class="track-list" id="trackList"></div></div>
 </div>
 </section>
 </div>
@@ -371,6 +392,7 @@ const elements = {
   albumCount: document.getElementById("albumCount"),
   search: document.getElementById("albumSearch"),
   searchCount: document.getElementById("searchCount"),
+   albumSort: document.getElementById("albumSort"),
   globalTrackResults: document.getElementById("globalTrackResults"),
   playlistSearch: document.getElementById("playlistSearch"),
   status: document.getElementById("syncStatus"),
@@ -387,6 +409,13 @@ const elements = {
   closePlaylist: document.getElementById("closePlaylist"),
   downloadZip: document.getElementById("downloadZipBtn"),
   downloadZipLabel: document.getElementById("downloadZipLabel"),
+   downloadProgress: document.getElementById("downloadProgress"),
+   downloadProgressText: document.getElementById("downloadProgressText"),
+   downloadProgressStats: document.getElementById("downloadProgressStats"),
+   downloadProgressFill: document.getElementById("downloadProgressFill"),
+   selectVisibleTracks: document.getElementById("selectVisibleTracksBtn"),
+   selectedTrackCount: document.getElementById("selectedTrackCount"),
+   downloadSelected: document.getElementById("downloadSelectedBtn"),
   playlistCover: document.getElementById("playlistCover"),
   playlistCoverMosaic: document.getElementById("playlistCoverMosaic"),
   playlistCoverFallback: document.getElementById("playlistCoverFallback"),
@@ -452,6 +481,7 @@ let isSeeking = false;
 let toastTimer = null;
 let zipDownloadActive = false;
 let zipDownloadToken = 0;
+const selectedTrackKeys = new Set();
 let audioReady = false;
 let audioContext = null;
 let audioAnalyser = null;
@@ -1170,32 +1200,136 @@ function createStreamingZipWriter(writable) {
   return { add, finish, abort };
 }
 
+function formatDownloadBytes(bytes) {
+  const value = Math.max(0, Number(bytes) || 0);
+  if (value < 1048576) return (value / 1024).toFixed(value < 10240 ? 0 : 1) + " КБ";
+  return (value / 1048576).toFixed(1) + " МБ";
+}
+
+function formatDownloadEta(seconds) {
+  if (!Number.isFinite(seconds) || seconds < 0) return "—";
+  const value = Math.ceil(seconds);
+  if (value < 60) return value + "с";
+  if (value < 3600) return Math.floor(value / 60) + "м " + String(value % 60).padStart(2, "0") + "с";
+  return Math.floor(value / 3600) + "ч " + String(Math.floor((value % 3600) / 60)).padStart(2, "0") + "м";
+}
+
+function updateDownloadProgress(completed, total, totalBytes, expectedBytes, startedAt) {
+  const elapsed = Math.max(.25, (performance.now() - startedAt) / 1000);
+  const speed = totalBytes / elapsed;
+  const eta = speed > 0 && expectedBytes > 0 ? Math.max(0, expectedBytes - totalBytes) / speed : NaN;
+  const percent = expectedBytes > 0 ? Math.min(100, totalBytes / expectedBytes * 100) : completed / Math.max(1, total) * 100;
+  elements.downloadProgress.hidden = false;
+  elements.downloadProgressText.textContent = completed + "/" + total + " · " + formatDownloadBytes(totalBytes) + (expectedBytes > 0 ? " / " + formatDownloadBytes(expectedBytes) : "");
+  elements.downloadProgressStats.textContent = formatDownloadBytes(speed) + "/с · осталось " + formatDownloadEta(eta);
+  elements.downloadProgressFill.style.width = percent.toFixed(1) + "%";
+}
+
+async function downloadSingleTrack(track) {
+  if (!track) return;
+  let handle = null;
+  let writable = null;
+  try {
+    const extension = String(track.fileName || "track.mp3").split(".").pop().toLowerCase();
+    const mime = extension === "ogg" ? "audio/ogg" : extension === "wav" ? "audio/wav" : "audio/mpeg";
+    const pickerPromise = typeof window.showSaveFilePicker === "function" ? window.showSaveFilePicker({
+      suggestedName: safeZipSegment(track.fileName || track.title + "." + extension),
+      types: [{ description: "Аудиофайл", accept: { [mime]: ["." + extension] } }]
+    }) : null;
+    if (pickerPromise) handle = await pickerPromise;
+    showToast("Загружаю: " + (track.title || track.fileName), "info");
+    const bytes = await fetchZipTrack(track);
+    if (handle) {
+      writable = await handle.createWritable();
+      await writable.write(bytes);
+      await writable.close();
+      writable = null;
+    } else {
+      const blob = new Blob([bytes], { type: mime });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = safeZipSegment(track.fileName || track.title + "." + extension);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 60000);
+    }
+    showToast("Трек скачан: " + (track.title || track.fileName) + " · " + formatDownloadBytes(bytes.length), "success");
+  } catch (error) {
+    if (writable) await writable.abort().catch(() => {});
+    if (error && error.name !== "AbortError") showToast(error.message || "Не удалось скачать трек.", "error");
+  }
+}
+
+function updateTrackSelectionUI() {
+  const selected = selectedTrackKeys.size;
+  if (elements.selectedTrackCount) elements.selectedTrackCount.textContent = selected + " выбрано";
+  if (elements.downloadSelected) elements.downloadSelected.disabled = selected === 0 || zipDownloadActive;
+  if (elements.selectVisibleTracks && viewedAlbum) {
+    const query = elements.playlistSearch.value.trim().toLocaleLowerCase("ru");
+    const visible = viewedAlbum.tracks.filter(track => !query || trackMatches(track, query) || String(track.albumTitle || "").toLocaleLowerCase("ru").includes(query));
+    const allSelected = visible.length > 0 && visible.every(track => selectedTrackKeys.has(track.path || track.durationKey || track.url));
+    elements.selectVisibleTracks.textContent = allSelected ? "Снять выделение" : "Выбрать всё";
+  }
+}
+
+function getSelectedTrackEntries() {
+  const entries = [];
+  const seen = new Set();
+  albums.forEach(album => album.tracks.forEach(track => {
+    const key = track.path || track.durationKey || track.url;
+    if (selectedTrackKeys.has(key) && !seen.has(key)) {
+      seen.add(key);
+      entries.push({ album, track });
+    }
+  }));
+  return entries;
+}
+
 async function downloadAlbumZip(album) {
+  if (!album) return;
+  const title = album.isAllTracks ? "GitWave - Все треки" : album.folder || album.title;
+  return downloadZipItems(title, album.tracks.map(track => ({ album, track })));
+}
+
+async function downloadSelectedTracksZip() {
+  const entries = getSelectedTrackEntries();
+  if (!entries.length) {
+    showToast("Сначала выбери композиции для архива.", "error");
+    return;
+  }
+  return downloadZipItems("GitWave - Выбранные треки", entries);
+}
+
+async function downloadZipItems(title, items) {
   if (zipDownloadActive) return;
-  if (!album || !Array.isArray(album.tracks) || !album.tracks.length) {
+  if (!Array.isArray(items) || !items.length) {
     showToast("В этом разделе нет треков для скачивания.", "error");
     return;
   }
-  const baseName = safeZipSegment(album.isAllTracks ? "GitWave - Все треки" : album.folder || album.title);
-  const suggestedName = baseName + ".zip";
+  const suggestedName = safeZipSegment(title) + ".zip";
   const token = ++zipDownloadToken;
   zipDownloadActive = true;
   elements.downloadZip.disabled = true;
+  elements.downloadSelected.disabled = true;
   let completed = 0;
   let totalBytes = 0;
+  const expectedBytes = items.reduce((sum, item) => sum + Math.max(0, Number(item.track.size) || 0), 0);
+  const startedAt = performance.now();
   let writable = null;
   let zipWriter = null;
-  let failed = false;
   elements.downloadZipLabel.textContent = "Выбор места…";
+  elements.downloadProgress.hidden = false;
+  elements.downloadProgressText.textContent = "Подготовка архива · " + items.length + " трек(ов)";
+  elements.downloadProgressStats.textContent = "Ожидаемая скорость —";
+  elements.downloadProgressFill.style.width = "0%";
   try {
     let saveHandle = null;
     if (typeof window.showSaveFilePicker === "function") {
       saveHandle = await window.showSaveFilePicker({
         suggestedName,
-        types: [{
-          description: "ZIP-архив",
-          accept: { "application/zip": [".zip"] }
-        }],
+        types: [{ description: "ZIP-архив", accept: { "application/zip": [".zip"] } }],
         excludeAcceptAllOption: false
       });
     }
@@ -1203,19 +1337,19 @@ async function downloadAlbumZip(album) {
       writable = await saveHandle.createWritable();
       zipWriter = createStreamingZipWriter(writable);
     }
-    elements.downloadZipLabel.textContent = "Загрузка 0/" + album.tracks.length;
-    const fallbackEntries = saveHandle ? null : new Array(album.tracks.length);
+    elements.downloadZipLabel.textContent = "Загрузка 0/" + items.length;
+    const fallbackEntries = saveHandle ? null : new Array(items.length);
     const failures = [];
     let cursor = 0;
     const worker = async () => {
       while (true) {
         const index = cursor++;
-        if (index >= album.tracks.length) return;
-        const track = album.tracks[index];
+        if (index >= items.length) return;
+        const item = items[index];
         try {
-          const bytes = await fetchZipTrack(track);
+          const bytes = await fetchZipTrack(item.track);
           totalBytes += bytes.length;
-          const entry = { name: zipTrackName(album, track), bytes };
+          const entry = { name: zipTrackName(item.album, item.track), bytes };
           if (zipWriter) await zipWriter.add(entry);
           else fallbackEntries[index] = entry;
         } catch (error) {
@@ -1223,20 +1357,24 @@ async function downloadAlbumZip(album) {
         }
         completed++;
         if (token === zipDownloadToken) {
-          const mb = (totalBytes / 1048576).toFixed(1);
-          elements.downloadZipLabel.textContent = completed + "/" + album.tracks.length + " · " + mb + " МБ";
+          elements.downloadZipLabel.textContent = "Загрузка " + completed + "/" + items.length;
+          updateDownloadProgress(completed, items.length, totalBytes, expectedBytes, startedAt);
         }
       }
     };
-    await Promise.all(Array.from({ length: Math.min(8, album.tracks.length) }, () => worker()));
+    await Promise.all(Array.from({ length: Math.min(8, items.length) }, () => worker()));
     if (failures.length) throw new Error("Не удалось скачать " + failures.length + " трек(ов): " + failures[0].message);
     if (zipWriter) {
       elements.downloadZipLabel.textContent = "Завершение ZIP…";
+      elements.downloadProgressText.textContent = "Формирую структуру архива…";
+      elements.downloadProgressStats.textContent = items.length + " файлов · " + formatDownloadBytes(totalBytes);
       const result = await zipWriter.finish();
       writable = null;
-      showToast("ZIP сохранён: " + suggestedName + " (" + (result.size / 1048576).toFixed(1) + " МБ).", "success");
+      elements.downloadProgressFill.style.width = "100%";
+      showToast("ZIP сохранён: " + suggestedName + " (" + formatDownloadBytes(result.size) + ").", "success");
     } else {
       elements.downloadZipLabel.textContent = "Создание ZIP…";
+      elements.downloadProgressText.textContent = "Создаю ZIP-архив…";
       const archive = buildZipArchive(fallbackEntries);
       const url = URL.createObjectURL(archive);
       const link = document.createElement("a");
@@ -1246,10 +1384,10 @@ async function downloadAlbumZip(album) {
       link.click();
       link.remove();
       setTimeout(() => URL.revokeObjectURL(url), 60000);
-      showToast("ZIP-архив готов: " + album.tracks.length + " трек(ов).", "success");
+      elements.downloadProgressFill.style.width = "100%";
+      showToast("ZIP-архив готов: " + items.length + " трек(ов).", "success");
     }
   } catch (error) {
-    failed = true;
     if (zipWriter) await zipWriter.abort();
     else if (writable) await writable.abort().catch(() => {});
     if (error && error.name !== "AbortError") showToast(error.message || "Не удалось сохранить ZIP-архив.", "error");
@@ -1258,6 +1396,8 @@ async function downloadAlbumZip(album) {
       zipDownloadActive = false;
       elements.downloadZip.disabled = !viewedAlbum || !viewedAlbum.tracks.length;
       elements.downloadZipLabel.textContent = "Скачать ZIP";
+      updateTrackSelectionUI();
+      elements.downloadProgress.hidden = true;
     }
   }
 }
@@ -1944,6 +2084,10 @@ function renderAlbums() {
     album.folder.toLocaleLowerCase("ru").includes(query) ||
     album.tracks.some(track => trackMatches(track, query))
   );
+  const sortMode = elements.albumSort.value;
+  if (sortMode === "name") filteredAlbums.sort((a, b) => a.title.localeCompare(b.title, "ru", { numeric: true, sensitivity: "base" }));
+  else if (sortMode === "tracks-desc") filteredAlbums.sort((a, b) => b.tracks.length - a.tracks.length || a.title.localeCompare(b.title, "ru", { numeric: true }));
+  else if (sortMode === "tracks-asc") filteredAlbums.sort((a, b) => a.tracks.length - b.tracks.length || a.title.localeCompare(b.title, "ru", { numeric: true }));
   elements.albumCount.textContent = String(albums.length);
   elements.searchCount.textContent = query ? `${pluralAlbums(filteredAlbums.length)} · ${pluralTracks(trackHits)}` : pluralTracks(albums.reduce((sum, album) => sum + album.tracks.length, 0));
   elements.empty.classList.remove("visible");
@@ -2134,24 +2278,37 @@ function renderTrackList() {
     elements.trackList.classList.remove("grouped-tracks");
     elements.trackList.innerHTML = '<div class="track-empty">В этом альбоме пока нет аудиофайлов.</div>';
     elements.trackCount.textContent = "0 TRACKS";
+    updateTrackSelectionUI();
     return;
   }
   const activeIndex = getViewedTrackIndex();
   const query = elements.playlistSearch.value.trim().toLocaleLowerCase("ru");
-  const visible = listAlbum.tracks.map((track, index) => ({ track, index })).filter(item => {
-    if (!query) return true;
-    return trackMatches(item.track, query) || String(item.track.albumTitle || "").toLocaleLowerCase("ru").includes(query);
-  });
-  elements.trackCount.textContent = query ? `${visible.length} / ${listAlbum.tracks.length} TRACKS` : `${listAlbum.tracks.length} TRACK${listAlbum.tracks.length === 1 ? "" : "S"}`;
+  const visible = listAlbum.tracks.map((track, index) => ({ track, index })).filter(item => !query || trackMatches(item.track, query) || String(item.track.albumTitle || "").toLocaleLowerCase("ru").includes(query));
+  elements.trackCount.textContent = query ? visible.length + " / " + listAlbum.tracks.length + " TRACKS" : listAlbum.tracks.length + " TRACK" + (listAlbum.tracks.length === 1 ? "" : "S");
   if (!visible.length) {
     elements.trackList.classList.remove("grouped-tracks");
     elements.trackList.innerHTML = '<div class="track-empty">По этому запросу треков не найдено.</div>';
+    updateTrackSelectionUI();
     return;
   }
+  const renderRow = (track, index, visibleIndex) => {
+    const key = track.path || track.durationKey || track.url;
+    const selected = selectedTrackKeys.has(key);
+    const subtitle = track.albumTitle || track.fileName || "";
+    return '<div class="track-row' + (index === activeIndex ? " active" : "") + (index === activeIndex && !elements.audio.paused ? " is-playing" : "") + '" data-track-index="' + index + '">' +
+      '<button class="track-play-area" type="button" data-track-play aria-label="Воспроизвести ' + escapeHTML(track.title) + '">' +
+      '<span class="track-number">' + String(visibleIndex + 1).padStart(2, "0") + '</span><canvas class="track-equalizer" width="76" height="32" aria-hidden="true"></canvas>' +
+      '<span class="track-title-wrap"><span class="track-title">' + escapeHTML(track.title) + '</span>' + (listAlbum.isAllTracks ? "" : '<span class="track-subtitle">' + escapeHTML(subtitle) + '</span>') + '</span></button>' +
+      '<span class="track-duration" data-duration-index="' + index + '">' + formatTrackDuration(track) + '</span>' +
+      '<button class="track-select-btn" type="button" data-track-select aria-pressed="' + (selected ? "true" : "false") + '" title="' + (selected ? "Убрать из выборки" : "Добавить в выборку") + '" aria-label="' + (selected ? "Убрать из выборки" : "Добавить в выборку") + '">' +
+      (selected ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 4 4L19 6"/></svg>' : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>') + '</button>' +
+      '<button class="track-download-btn" type="button" data-track-download title="Скачать трек" aria-label="Скачать ' + escapeHTML(track.title) + '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0 4-4m-4 4-4-4"/><path d="M4 16v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></svg></button></div>';
+  };
   if (!listAlbum.isAllTracks) {
     elements.trackList.classList.remove("grouped-tracks");
-    elements.trackList.innerHTML = visible.map(({track,index}, visibleIndex) => `<div class="track-row${index === activeIndex ? " active" : ""}${index === activeIndex && !elements.audio.paused ? " is-playing" : ""}" data-track-index="${index}" role="button" tabindex="0"><span class="track-number">${String(visibleIndex + 1).padStart(2,"0")}</span><canvas class="track-equalizer" width="76" height="32" aria-hidden="true"></canvas><span class="track-title-wrap"><span class="track-title">${escapeHTML(track.title)}</span><span class="track-subtitle">${escapeHTML(track.albumTitle || track.fileName)}</span></span><span class="track-duration" data-duration-index="${index}">${formatTrackDuration(track)}</span></div>`).join("");
+    elements.trackList.innerHTML = visible.map(({track,index}, visibleIndex) => renderRow(track,index,visibleIndex)).join("");
     updateTrackListState();
+    updateTrackSelectionUI();
     return;
   }
   elements.trackList.classList.add("grouped-tracks");
@@ -2159,20 +2316,15 @@ function renderTrackList() {
   const groupMap = new Map();
   visible.forEach(item => {
     const key = item.track.albumId || item.track.albumTitle || "__uncategorized__";
-    if (!groupMap.has(key)) {
-      const group = { key, title: item.track.albumTitle || "Без категории", items: [] };
-      groupMap.set(key, group);
-      groups.push(group);
-    }
+    if (!groupMap.has(key)) groupMap.set(key, { key, title: item.track.albumTitle || "Без категории", items: [] });
     groupMap.get(key).items.push(item);
   });
-  elements.trackList.innerHTML = groups.map(group => {
-    const count = group.items.length;
-    const heading = `<div class="track-group-heading"><span class="track-group-marker"></span><span class="track-group-title">${escapeHTML(group.title)}</span><span class="track-group-count">${count} TRACK${count === 1 ? "" : "S"}</span></div>`;
-    const rows = group.items.map(({track,index}, groupIndex) => `<div class="track-row${index === activeIndex ? " active" : ""}${index === activeIndex && !elements.audio.paused ? " is-playing" : ""}" data-track-index="${index}" role="button" tabindex="0"><span class="track-number">${String(groupIndex + 1).padStart(2,"0")}</span><canvas class="track-equalizer" width="76" height="32" aria-hidden="true"></canvas><span class="track-title-wrap"><span class="track-title">${escapeHTML(track.title)}</span></span><span class="track-duration" data-duration-index="${index}">${formatTrackDuration(track)}</span></div>`).join("");
-    return heading + rows;
+  elements.trackList.innerHTML = groups.concat(Array.from(groupMap.values())).map(group => {
+    const heading = '<div class="track-group-heading"><span class="track-group-marker"></span><span class="track-group-title">' + escapeHTML(group.title) + '</span><span class="track-group-count">' + group.items.length + ' TRACK' + (group.items.length === 1 ? "" : "S") + '</span></div>';
+    return heading + group.items.map(({track,index}, groupIndex) => renderRow(track,index,groupIndex)).join("");
   }).join("");
   updateTrackListState();
+  updateTrackSelectionUI();
 }
 
 function updateTrackListState() {
@@ -2186,6 +2338,7 @@ function updateTrackListState() {
     const track = viewedAlbum && viewedAlbum.tracks[index];
     if (duration && track && track.duration) duration.textContent = formatTrackDuration(track);
   });
+  updateTrackSelectionUI();
 }
 
 function registerShuffleSelection(index) {
@@ -2904,6 +3057,7 @@ elements.grid.addEventListener("pointerleave", event => {
   cover.style.setProperty("--tilt-y", "0deg");
 }, true);
 elements.search.addEventListener("input", renderAlbums);
+elements.albumSort.addEventListener("change", renderAlbums);
 elements.globalTrackResults.addEventListener("click", event => {
   const result = event.target.closest(".global-track-result");
   if (!result) return;
@@ -2936,18 +3090,36 @@ elements.playAll.addEventListener("click", () => {
   setCurrentTrack(startIndex, true, { album: viewedAlbum, recordHistory: true });
 });
 elements.shuffleAlbum.addEventListener("click", togglePlaylistShuffle);
+elements.selectVisibleTracks.addEventListener("click", () => {
+  if (!viewedAlbum) return;
+  const query = elements.playlistSearch.value.trim().toLocaleLowerCase("ru");
+  const visible = viewedAlbum.tracks.filter(track => !query || trackMatches(track, query) || String(track.albumTitle || "").toLocaleLowerCase("ru").includes(query));
+  const allSelected = visible.length > 0 && visible.every(track => selectedTrackKeys.has(track.path || track.durationKey || track.url));
+  visible.forEach(track => {
+    const key = track.path || track.durationKey || track.url;
+    if (allSelected) selectedTrackKeys.delete(key);
+    else selectedTrackKeys.add(key);
+  });
+  renderTrackList();
+});
+elements.downloadSelected.addEventListener("click", downloadSelectedTracksZip);
 elements.trackList.addEventListener("click", event => {
   const row = event.target.closest(".track-row");
   if (!row || !viewedAlbum) return;
   const index = Number(row.dataset.trackIndex);
-  setCurrentTrack(index, true, { album: viewedAlbum, recordHistory: true });
-});
-elements.trackList.addEventListener("keydown", event => {
-  if (event.key !== "Enter" && event.key !== " ") return;
-  const row = event.target.closest(".track-row");
-  if (!row || !viewedAlbum) return;
-  event.preventDefault();
-  setCurrentTrack(Number(row.dataset.trackIndex), true, { album: viewedAlbum, recordHistory: true });
+  const track = viewedAlbum.tracks[index];
+  if (event.target.closest("[data-track-select]")) {
+    const key = track.path || track.durationKey || track.url;
+    if (selectedTrackKeys.has(key)) selectedTrackKeys.delete(key);
+    else selectedTrackKeys.add(key);
+    renderTrackList();
+    return;
+  }
+  if (event.target.closest("[data-track-download]")) {
+    downloadSingleTrack(track);
+    return;
+  }
+  if (event.target.closest("[data-track-play]")) setCurrentTrack(index, true, { album: viewedAlbum, recordHistory: true });
 });
 elements.shuffle.addEventListener("click", toggleShuffle);
 elements.previous.addEventListener("click", previousTrack);
