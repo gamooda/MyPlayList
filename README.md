@@ -30,7 +30,7 @@
   <img src="docs/screenshots/playlist.png" alt="GitWave — экран альбома и список треков" width="100%">
 </a>
 
-<sub>Скриншоты автоматически снимаются с опубликованной версии GitWave в Chromium.</sub>
+<sub>Скриншоты автоматически снимаются с опубликованной версии GitWave в Chromium после обновления сайта.</sub>
 
 </div>
 
