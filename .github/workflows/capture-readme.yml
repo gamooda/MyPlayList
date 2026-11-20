@@ -89,6 +89,7 @@ jobs:
               const records = [];
               const makeDirectory = (name, path) => {
                 const directories = new Map();
+                const files = new Map();
                 return {
                   name,
                   queryPermission: async () => "granted",
@@ -99,7 +100,14 @@ jobs:
                     return directories.get(childName);
                   },
                   getFileHandle: async (fileName, options = {}) => {
-                    if (!options.create) throw new Error("File not found: " + fileName);
+                    if (!files.has(fileName)) {
+                      if (!options.create) {
+                        const error = new Error("File not found: " + fileName);
+                        error.name = "NotFoundError";
+                        throw error;
+                      }
+                      files.set(fileName, true);
+                    }
                     return {
                       name: fileName,
                       createWritable: async () => {
@@ -111,7 +119,7 @@ jobs:
                       }
                     };
                   },
-                  removeEntry: async () => {}
+                  removeEntry: async fileName => { files.delete(fileName); }
                 };
               };
               const root = makeDirectory("Selected", "Selected");
