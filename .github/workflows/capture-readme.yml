@@ -294,7 +294,6 @@ jobs:
                 return { type: blob.type, size: blob.size, header: head, entries: end >= 0 ? view.getUint16(end + 10, true) : 0 };
               });
               if (!selectedDownload.suggestedFilename().includes('Выбранные треки') || selectedZip.header !== 0x04034b50 || selectedZip.entries !== 1) throw new Error('Browser selected ZIP download validation failed: ' + JSON.stringify({ filename: selectedDownload.suggestedFilename(), selectedZip }));
-              await page.locator('#trackList .track-row').first().locator('[data-track-download]').click();
               const [singleDownload] = await Promise.all([
                 page.waitForEvent('download', { timeout: 180000 }),
                 page.locator('#trackList .track-row').first().locator('[data-track-download]').click()
