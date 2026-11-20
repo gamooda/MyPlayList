@@ -1,6 +1,6 @@
 <div align="center">
 
-# gitwave
+<img src="ico-main/gitwave.svg" alt="gitwave" width="225">
 
 **Музыкальная библиотека, которая всегда под рукой.**
 
