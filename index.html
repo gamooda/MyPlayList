@@ -341,7 +341,7 @@ body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;ba
 </div>
 </header>
 <main class="library-section">
-<div class="filterbar"><label class="search-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7.5"/><path d="m20 20-4-4"/></svg><input id="albumSearch" type="search" placeholder="Найти альбом или трек..." autocomplete="off" aria-label="Найти альбом или трек"></label><select class="catalog-sort" id="albumSort" aria-label="Сортировка альбомов"><option value="default">По умолчанию</option><option value="name">По названию</option><option value="tracks-desc">Больше треков</option><option value="tracks-asc">Меньше треков</option></select><div class="filterbar-meta"><span class="search-result-count" id="searchCount"></span><div class="sync-status" id="syncStatus"><i class="status-dot"></i><span id="statusText">Подключение...</span></div></div><span class="album-count" id="albumCount">0</span></div>
+<div class="filterbar"><label class="search-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7.5"/><path d="m20 20-4-4"/></svg><input id="albumSearch" type="search" placeholder="Найти альбом или трек..." autocomplete="off" aria-label="Найти альбом или трек"></label><div class="filterbar-meta"><span class="search-result-count" id="searchCount"></span><div class="sync-status" id="syncStatus"><i class="status-dot"></i><span id="statusText">Подключение...</span></div></div><span class="album-count" id="albumCount">0</span></div>
 <div class="global-track-results" id="globalTrackResults" hidden></div>
 <div class="album-grid" id="albumGrid"></div>
 <div class="empty-state" id="emptyState"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="24" cy="24" r="18"/><path d="M20 18v12l11-6-11-6Z"/><path d="M8 12 5 9m35 3 3-3M8 36l-3 3m35-3 3 3"/></svg><strong id="emptyTitle">Здесь пока тихо</strong><p id="emptyMessage">Не удалось загрузить музыкальную библиотеку.</p><button id="emptyRetry" type="button">Попробовать снова</button></div>
@@ -398,7 +398,6 @@ const elements = {
   albumCount: document.getElementById("albumCount"),
   search: document.getElementById("albumSearch"),
   searchCount: document.getElementById("searchCount"),
-   albumSort: document.getElementById("albumSort"),
   globalTrackResults: document.getElementById("globalTrackResults"),
   playlistSearch: document.getElementById("playlistSearch"),
   status: document.getElementById("syncStatus"),
@@ -2296,10 +2295,6 @@ function renderAlbums() {
     album.folder.toLocaleLowerCase("ru").includes(query) ||
     album.tracks.some(track => trackMatches(track, query))
   );
-  const sortMode = elements.albumSort.value;
-  if (sortMode === "name") filteredAlbums.sort((a, b) => a.title.localeCompare(b.title, "ru", { numeric: true, sensitivity: "base" }));
-  else if (sortMode === "tracks-desc") filteredAlbums.sort((a, b) => b.tracks.length - a.tracks.length || a.title.localeCompare(b.title, "ru", { numeric: true }));
-  else if (sortMode === "tracks-asc") filteredAlbums.sort((a, b) => a.tracks.length - b.tracks.length || a.title.localeCompare(b.title, "ru", { numeric: true }));
   elements.albumCount.textContent = String(albums.length);
   elements.searchCount.textContent = query ? `${pluralAlbums(filteredAlbums.length)} · ${pluralTracks(trackHits)}` : pluralTracks(albums.reduce((sum, album) => sum + album.tracks.length, 0));
   elements.empty.classList.remove("visible");
@@ -3269,7 +3264,6 @@ elements.grid.addEventListener("pointerleave", event => {
   cover.style.setProperty("--tilt-y", "0deg");
 }, true);
 elements.search.addEventListener("input", renderAlbums);
-elements.albumSort.addEventListener("change", renderAlbums);
 elements.globalTrackResults.addEventListener("click", event => {
   const result = event.target.closest(".global-track-result");
   if (!result) return;
