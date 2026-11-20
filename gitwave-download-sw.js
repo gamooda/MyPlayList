@@ -36,30 +36,46 @@ async function createDownloadResponse(event, url, release) {
   const channel = new MessageChannel();
   const port = channel.port1;
   let controller = null;
-  let pending = null;
+  let pendingPull = null;
   let closed = false;
+
+  const finishPull = error => {
+    if (!pendingPull) return;
+    const pull = pendingPull;
+    pendingPull = null;
+    if (error) pull.reject(error);
+    else pull.resolve();
+  };
 
   const stream = new ReadableStream({
     start(value) {
       controller = value;
     },
-    pull(value) {
-      if (pending) {
-        const item = pending;
-        pending = null;
-        value.enqueue(item.chunk);
-        port.postMessage({ type: "ACK", seq: item.seq });
-      } else if (!closed) {
-        port.postMessage({ type: "PULL" });
-      }
+    pull() {
+      if (closed) return;
+      return new Promise((resolve, reject) => {
+        if (pendingPull) {
+          reject(new Error("A download pull is already pending"));
+          return;
+        }
+        pendingPull = { resolve, reject };
+        try {
+          port.postMessage({ type: "PULL" });
+        } catch (error) {
+          finishPull(error);
+        }
+      });
     },
     cancel(reason) {
       closed = true;
+      finishPull(new Error(String(reason || "Download cancelled")));
       try {
         port.postMessage({ type: "ABORT", reason: String(reason || "cancelled") });
+      } catch (error) {
+      }
+      try {
         port.close();
       } catch (error) {
-        release();
       }
       release();
     }
@@ -69,39 +85,63 @@ async function createDownloadResponse(event, url, release) {
     const message = event.data || {};
     if (closed || !controller) return;
     if (message.type === "CHUNK") {
-      if (pending) {
+      if (!pendingPull) {
         closed = true;
-        controller.error(new Error("Download stream overflow"));
+        const error = new Error("Unexpected download chunk");
         try {
-          port.postMessage({ type: "ABORT", reason: "overflow" });
+          controller.error(error);
+        } catch (controllerError) {
+        }
+        try {
+          port.postMessage({ type: "ABORT", reason: error.message });
           port.close();
-        } catch (error) {
+        } catch (portError) {
         }
         release();
         return;
       }
-      if (controller.desiredSize > 0) {
+      try {
         controller.enqueue(message.chunk);
         port.postMessage({ type: "ACK", seq: message.seq });
-      } else {
-        pending = { chunk: message.chunk, seq: message.seq };
+        finishPull();
+      } catch (error) {
+        closed = true;
+        finishPull(error);
+        try {
+          controller.error(error);
+          port.postMessage({ type: "ABORT", reason: error.message || "stream error" });
+          port.close();
+        } catch (portError) {
+        }
+        release();
       }
     } else if (message.type === "CLOSE") {
       closed = true;
-      if (pending) {
-        controller.enqueue(pending.chunk);
-        port.postMessage({ type: "ACK", seq: pending.seq });
-        pending = null;
+      try {
+        controller.close();
+        finishPull();
+        port.postMessage({ type: "CLOSED" });
+      } catch (error) {
+        finishPull(error);
       }
-      controller.close();
-      port.postMessage({ type: "CLOSED" });
-      port.close();
+      try {
+        port.close();
+      } catch (error) {
+      }
       release();
     } else if (message.type === "ERROR") {
       closed = true;
-      controller.error(new Error(String(message.message || "Download cancelled")));
-      port.postMessage({ type: "CLOSED" });
-      port.close();
+      const error = new Error(String(message.message || "Download cancelled"));
+      try {
+        controller.error(error);
+      } catch (controllerError) {
+      }
+      finishPull(error);
+      try {
+        port.postMessage({ type: "CLOSED" });
+        port.close();
+      } catch (portError) {
+      }
       release();
     }
   };
