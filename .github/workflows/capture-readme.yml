@@ -78,12 +78,14 @@ jobs:
         env:
           PLAYWRIGHT_PATH: ${{ runner.temp }}/gitwave-capture/node_modules/playwright
         run: |
-          mkdir -p docs/screenshots /tmp/gitwave-gif-frames
+          mkdir -p docs/screenshots /tmp/gitwave-library-frames /tmp/gitwave-gif-frames
           cat > capture-readme.cjs <<'EOF'
           const { chromium } = require(process.env.PLAYWRIGHT_PATH);
+          const fs = require('node:fs');
           (async () => {
             const browser = await chromium.launch({ headless: true });
-            const page = await browser.newPage({ viewport: { width: 1280, height: 800 }, deviceScaleFactor: 1 });
+            const context = await browser.newContext({ viewport: { width: 1280, height: 800 }, deviceScaleFactor: 1, acceptDownloads: true });
+            const page = await context.newPage();
             const pageErrors = [];
             page.setDefaultTimeout(45000);
             page.on('pageerror', error => pageErrors.push(String(error)));
@@ -93,30 +95,62 @@ jobs:
             const captureUrl = 'https://gamooda.github.io/gitwave/?capture=' + process.env.DEPLOYED_SHA;
             console.log('Opening deployed revision:', process.env.DEPLOYED_SHA, captureUrl);
             await page.goto(captureUrl, { waitUntil: 'domcontentloaded', timeout: 90000 });
-            await page.waitForFunction(() => {
-              const grid = document.querySelector('#albumGrid');
-              const status = document.querySelector('#syncStatus');
-              return Boolean(grid && (grid.querySelector('.album-card') || status?.classList.contains('error')));
-            }, { timeout: 180000 }).catch(async () => {
-              const state = await page.evaluate(() => ({
-                title: document.title,
-                url: location.href,
-                status: document.querySelector('#statusText')?.textContent || '',
-                statusClass: document.querySelector('#syncStatus')?.className || '',
-                empty: document.querySelector('#emptyTitle')?.textContent || '',
-                message: document.querySelector('#emptyMessage')?.textContent || '',
-                grid: document.querySelector('#albumGrid')?.innerHTML?.slice(0, 1200) || '',
-                errors: pageErrors
-              }));
-              throw new Error('GitWave library did not finish loading: ' + JSON.stringify(state));
-            });
-            await page.waitForSelector('#albumGrid .album-card', { state: 'visible', timeout: 45000 });
+            const waitForLibrary = async () => {
+              await page.waitForFunction(() => {
+                const grid = document.querySelector('#albumGrid');
+                const status = document.querySelector('#syncStatus');
+                return Boolean(grid && (grid.querySelector('.album-card') || status?.classList.contains('error')));
+              }, { timeout: 180000 }).catch(async () => {
+                const state = await page.evaluate(() => ({
+                  title: document.title,
+                  url: location.href,
+                  status: document.querySelector('#statusText')?.textContent || '',
+                  statusClass: document.querySelector('#syncStatus')?.className || '',
+                  empty: document.querySelector('#emptyTitle')?.textContent || '',
+                  message: document.querySelector('#emptyMessage')?.textContent || '',
+                  grid: document.querySelector('#albumGrid')?.innerHTML?.slice(0, 1200) || '',
+                  errors: pageErrors
+                }));
+                throw new Error('GitWave library did not finish loading: ' + JSON.stringify(state));
+              });
+              await page.waitForSelector('#albumGrid .album-card', { state: 'visible', timeout: 45000 });
+              await page.evaluate(() => document.fonts.ready);
+            };
+            await waitForLibrary();
             await page.waitForFunction(() => {
               const images = [...document.querySelectorAll('#albumGrid img')];
               return images.every(image => image.complete);
             }, { timeout: 20000 }).catch(() => {});
-            await page.evaluate(() => document.fonts.ready);
-            await page.screenshot({ path: 'docs/screenshots/library.png', fullPage: true });
+            let libraryFrame = 0;
+            const captureLibrary = async (copies = 1) => {
+              for (let i = 0; i < copies; i++) {
+                await page.screenshot({ path: '/tmp/gitwave-library-frames/frame-' + String(libraryFrame++).padStart(4, '0') + '.png' });
+              }
+            };
+            await captureLibrary(15);
+            const albumCards = page.locator('#albumGrid .album-card:not([data-album-id="__all_tracks__"])');
+            const albumCount = await albumCards.count();
+            if (albumCount < 3) throw new Error('The library preview needs at least three albums, found ' + albumCount);
+            for (let albumIndex = 0; albumIndex < 3; albumIndex++) {
+              const card = albumCards.nth(albumIndex);
+              const albumTitle = await card.locator('.album-name').textContent();
+              await card.scrollIntoViewIfNeeded();
+              await card.click();
+              await page.locator('#playlistOverlay.open').waitFor({ state: 'visible', timeout: 30000 });
+              const firstTrack = page.locator('#trackList .track-row').first();
+              await firstTrack.waitFor({ state: 'visible', timeout: 30000 });
+              await firstTrack.click();
+              await page.waitForTimeout(700);
+              await captureLibrary(5);
+              await page.locator('#closePlaylist').click();
+              await page.locator('#playlistOverlay.open').waitFor({ state: 'hidden', timeout: 30000 });
+              await page.waitForTimeout(300);
+              await captureLibrary(15);
+              console.log('Library preview played first track:', albumTitle);
+            }
+            console.log('Captured library GIF frames:', libraryFrame);
+            await page.goto(captureUrl + '&preview=all-tracks', { waitUntil: 'domcontentloaded', timeout: 90000 });
+            await waitForLibrary();
             await page.locator('article[data-album-id="__all_tracks__"]').click();
             await page.locator('#playlistOverlay.open').waitFor({ state: 'visible', timeout: 30000 });
             await page.locator('#trackList .track-group-heading').first().waitFor({ state: 'visible', timeout: 30000 });
@@ -165,8 +199,36 @@ jobs:
             }
             await list.evaluate(el => { el.scrollTop = el.scrollHeight; });
             await capture(15);
+            console.log('Captured all-tracks GIF frames:', frame, 'categories:', groups);
+            await page.goto(captureUrl + '&zip-test=1', { waitUntil: 'domcontentloaded', timeout: 90000 });
+            await waitForLibrary();
+            const smallestAlbum = await page.locator('#albumGrid .album-card:not([data-album-id="__all_tracks__"])').evaluateAll(cards => {
+              return cards.map((card, index) => ({
+                index,
+                count: Number.parseInt(card.querySelector('.album-track-count')?.textContent || '0', 10)
+              })).filter(item => item.count > 0).sort((a, b) => a.count - b.count)[0];
+            });
+            if (smallestAlbum) {
+              await page.locator('#albumGrid .album-card:not([data-album-id="__all_tracks__"])').nth(smallestAlbum.index).click();
+              await page.locator('#playlistOverlay.open').waitFor({ state: 'visible', timeout: 30000 });
+              const downloadPromise = page.waitForEvent('download', { timeout: 180000 });
+              await page.locator('#downloadZipBtn').click();
+              const download = await downloadPromise;
+              const zipPath = await download.path();
+              if (!zipPath) throw new Error('ZIP download has no file path');
+              const archive = fs.readFileSync(zipPath);
+              if (archive.length < 22 || archive.readUInt32LE(0) !== 0x04034b50) throw new Error('Downloaded archive has an invalid ZIP header');
+              let endOffset = -1;
+              for (let index = archive.length - 22; index >= Math.max(0, archive.length - 65558); index--) {
+                if (archive.readUInt32LE(index) === 0x06054b50) {
+                  endOffset = index;
+                  break;
+                }
+              }
+              if (endOffset < 0 || archive.readUInt16LE(endOffset + 10) !== smallestAlbum.count) throw new Error('ZIP archive entry count does not match the selected album');
+              console.log('Verified ZIP archive:', download.suggestedFilename(), archive.length, 'bytes,', smallestAlbum.count, 'track(s)');
+            }
             await browser.close();
-            console.log('Captured frames:', frame, 'categories:', groups);
           })().catch(error => {
             console.error(error);
             process.exit(1);
@@ -174,21 +236,22 @@ jobs:
           EOF
           node capture-readme.cjs
           rm capture-readme.cjs
+          ffmpeg -y -framerate 6 -i /tmp/gitwave-library-frames/frame-%04d.png -vf "fps=6,scale=900:-1:flags=lanczos,split[s0][s1];[s0]palettegen=max_colors=128:stats_mode=diff[p];[s1][p]paletteuse=dither=bayer:bayer_scale=3:diff_mode=rectangle" -loop 0 docs/screenshots/library.gif
           ffmpeg -y -framerate 6 -i /tmp/gitwave-gif-frames/frame-%04d.png -vf "fps=6,scale=900:-1:flags=lanczos,split[s0][s1];[s0]palettegen=max_colors=128:stats_mode=diff[p];[s1][p]paletteuse=dither=bayer:bayer_scale=3:diff_mode=rectangle" -loop -1 docs/screenshots/all-tracks.gif
       - name: Commit screenshots and GIF
         run: |
           mkdir -p /tmp/gitwave-capture-result
-          cp docs/screenshots/library.png /tmp/gitwave-capture-result/library.png
+          cp docs/screenshots/library.gif /tmp/gitwave-capture-result/library.gif
           cp docs/screenshots/all-tracks.gif /tmp/gitwave-capture-result/all-tracks.gif
           git config user.name github-actions[bot]
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
           git fetch origin main
           git checkout -B main origin/main
           mkdir -p docs/screenshots
-          cp /tmp/gitwave-capture-result/library.png docs/screenshots/library.png
+          cp /tmp/gitwave-capture-result/library.gif docs/screenshots/library.gif
           cp /tmp/gitwave-capture-result/all-tracks.gif docs/screenshots/all-tracks.gif
-          git rm -f docs/screenshots/playlist.png || true
-          git add docs/screenshots/library.png docs/screenshots/all-tracks.gif
+          git rm -f docs/screenshots/library.png docs/screenshots/playlist.png || true
+          git add docs/screenshots/library.gif docs/screenshots/all-tracks.gif
           if ! git diff --cached --quiet; then
             git commit -m "Add GitWave all-tracks animated preview"
             for attempt in 1 2 3; do
