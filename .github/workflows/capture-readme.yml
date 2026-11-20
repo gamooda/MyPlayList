@@ -153,7 +153,7 @@ jobs:
               await page.locator('#playlistOverlay.open').waitFor({ state: 'visible', timeout: 30000 });
               const firstTrack = page.locator('#trackList .track-row').first();
               await firstTrack.waitFor({ state: 'visible', timeout: 30000 });
-              await firstTrack.click();
+              await firstTrack.locator('[data-track-play]').click();
               await page.waitForTimeout(700);
               await captureLibrary(5);
               await page.locator('#closePlaylist').click();
@@ -196,7 +196,7 @@ jobs:
               await heading.scrollIntoViewIfNeeded();
               await page.waitForTimeout(150);
               const firstRow = heading.locator('xpath=following-sibling::div[contains(@class,"track-row")][1]');
-              await firstRow.click();
+              await firstRow.locator('[data-track-play]').click();
               await page.waitForTimeout(400);
               await capture(3);
               const from = await list.evaluate(el => el.scrollTop);
