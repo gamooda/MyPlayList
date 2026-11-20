@@ -46,9 +46,36 @@ jobs:
             const browser = await chromium.launch({ headless: true });
             const page = await browser.newPage({ viewport: { width: 1440, height: 1000 }, deviceScaleFactor: 1 });
             page.setDefaultTimeout(60000);
-            await page.goto('https://gamooda.github.io/gitwave/', { waitUntil: 'domcontentloaded', timeout: 120000 });
-            await page.locator('.album-card').first().waitFor({ state: 'visible', timeout: 120000 });
-            await page.waitForTimeout(2500);
+            page.on('pageerror', error => {
+              if (!window.__gitwaveCaptureErrors) window.__gitwaveCaptureErrors = [];
+              window.__gitwaveCaptureErrors.push(String(error));
+            });
+            page.on('console', message => {
+              if (message.type() === 'error') console.error('PAGE CONSOLE:', message.text());
+            });
+            await page.goto('https://gamooda.github.io/gitwave/', { waitUntil: 'networkidle', timeout: 180000 }).catch(async error => {
+              console.error('Initial navigation did not reach networkidle:', error.message);
+              await page.goto('https://gamooda.github.io/gitwave/', { waitUntil: 'domcontentloaded', timeout: 180000 });
+            });
+            await page.waitForFunction(() => {
+              const grid = document.querySelector('#albumGrid');
+              const status = document.querySelector('#syncStatus');
+              return Boolean(grid && (grid.querySelector('.album-card') || status?.classList.contains('error')));
+            }, { timeout: 240000 }).catch(async () => {
+              const state = await page.evaluate(() => ({
+                title: document.title,
+                url: location.href,
+                status: document.querySelector('#statusText')?.textContent || '',
+                statusClass: document.querySelector('#syncStatus')?.className || '',
+                empty: document.querySelector('#emptyTitle')?.textContent || '',
+                message: document.querySelector('#emptyMessage')?.textContent || '',
+                grid: document.querySelector('#albumGrid')?.innerHTML?.slice(0, 1200) || '',
+                errors: window.__gitwaveCaptureErrors || []
+              }));
+              throw new Error('GitWave library did not finish loading: ' + JSON.stringify(state));
+            });
+            await page.waitForFunction(() => document.querySelector('#albumGrid .album-card'), { timeout: 60000 });
+            await page.waitForTimeout(1800);
             await page.screenshot({ path: 'docs/screenshots/library.png', fullPage: true });
             await page.locator('article[data-album-id="__all_tracks__"]').click();
             await page.locator('#playlistOverlay.open').waitFor({ state: 'visible', timeout: 60000 });
