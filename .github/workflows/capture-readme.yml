@@ -236,17 +236,23 @@ jobs:
               if (!(await page.locator('#downloadSelectedBtn').isDisabled())) throw new Error('Track selection did not clear');
               await page.waitForFunction(() => Boolean(navigator.serviceWorker?.controller), null, { timeout: 30000 });
               const inspectDownload = async download => {
-                const filePath = await new Promise((resolve, reject) => {
-                  const timer = setTimeout(() => reject(new Error('Browser download did not finish within 30 seconds: ' + download.suggestedFilename())), 30000);
-                  download.path().then(path => {
-                    clearTimeout(timer);
-                    resolve(path);
-                  }, error => {
-                    clearTimeout(timer);
-                    reject(error);
+                let filePath;
+                try {
+                  filePath = await new Promise((resolve, reject) => {
+                    const timer = setTimeout(() => reject(new Error('Browser download did not finish within 30 seconds: ' + download.suggestedFilename())), 30000);
+                    download.path().then(path => {
+                      clearTimeout(timer);
+                      resolve(path);
+                    }, error => {
+                      clearTimeout(timer);
+                      reject(error);
+                    });
                   });
-                });
-                if (!filePath) throw new Error('Browser download has no temporary file');
+                } catch (error) {
+                  const failure = await download.failure().catch(() => 'Download failure reason unavailable');
+                  throw new Error('Browser download failed: ' + download.suggestedFilename() + '; reason: ' + failure + '; ' + error.message);
+                }
+                if (!filePath) throw new Error('Browser download has no temporary file: ' + download.suggestedFilename());
                 const bytes = fs.readFileSync(filePath);
                 let endOffset = -1;
                 for (let index = bytes.length - 22; index >= Math.max(0, bytes.length - 65558); index--) {
