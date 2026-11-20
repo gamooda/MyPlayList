@@ -175,7 +175,8 @@ body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;ba
 .track-row.active .track-duration{color:rgb(var(--active-rgb))}
 .track-equalizer{width:38px;height:16px;display:none;align-self:center;overflow:visible}
 .track-row.active.is-playing .track-equalizer{display:block}
-.track-row.active.is-playing .track-number{display:none}
+.track-row.active.is-playing .track-number .track-number-text{display:none}
+.track-number .track-equalizer{width:24px;height:16px}
 .track-select-btn,.track-download-btn{width:28px;height:28px;display:grid;place-items:center;border:1px solid transparent;border-radius:7px;background:transparent;color:#777783;cursor:pointer;transition:background .18s,border-color .18s,color .18s}
 .track-select-btn svg,.track-download-btn svg{width:14px;height:14px;display:block}
 .track-select-btn:hover,.track-download-btn:hover{border-color:rgba(255,255,255,.12);background:rgba(255,255,255,.07);color:#e4e4e7}
@@ -2298,7 +2299,7 @@ function renderTrackList() {
     const subtitle = track.albumTitle || track.fileName || "";
     return '<div class="track-row' + (index === activeIndex ? " active" : "") + (index === activeIndex && !elements.audio.paused ? " is-playing" : "") + '" data-track-index="' + index + '">' +
       '<button class="track-play-area" type="button" data-track-play aria-label="Воспроизвести ' + escapeHTML(track.title) + '">' +
-      '<span class="track-number">' + String(visibleIndex + 1).padStart(2, "0") + '</span><canvas class="track-equalizer" width="76" height="32" aria-hidden="true"></canvas>' +
+      '<span class="track-number"><span class="track-number-text">' + String(visibleIndex + 1).padStart(2, "0") + '</span><canvas class="track-equalizer" width="76" height="32" aria-hidden="true"></canvas></span>' +
       '<span class="track-title-wrap"><span class="track-title">' + escapeHTML(track.title) + '</span>' + (listAlbum.isAllTracks ? "" : '<span class="track-subtitle">' + escapeHTML(subtitle) + '</span>') + '</span></button>' +
       '<span class="track-duration" data-duration-index="' + index + '">' + formatTrackDuration(track) + '</span>' +
       '<button class="track-select-btn" type="button" data-track-select aria-pressed="' + (selected ? "true" : "false") + '" title="' + (selected ? "Убрать из выборки" : "Добавить в выборку") + '" aria-label="' + (selected ? "Убрать из выборки" : "Добавить в выборку") + '">' +
