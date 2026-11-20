@@ -187,7 +187,7 @@ async function createDownloadResponse(url, release) {
   port.start();
 
   const fallbackName = fileName.replace(/[\u0000-\u001f\u007f"\\]/g, "_").replace(/[^\x20-\x7E]/g, "_") || "download.bin";
-  const disposition = 'attachment; filename="' + fallbackName + '"; filename*=UTF-8\\'\\'' + encodeURIComponent(fileName);
+  const disposition = "attachment; filename=\"" + fallbackName + "\"; filename*=UTF-8" + String.fromCharCode(39) + String.fromCharCode(39) + encodeURIComponent(fileName);
   return new Response(stream, {
     status: 200,
     headers: {
