@@ -1221,7 +1221,7 @@ function updateDownloadProgress(completed, total, totalBytes, expectedBytes, sta
   const eta = speed > 0 && expectedBytes > 0 ? Math.max(0, expectedBytes - totalBytes) / speed : NaN;
   const percent = expectedBytes > 0 ? Math.min(100, totalBytes / expectedBytes * 100) : completed / Math.max(1, total) * 100;
   elements.downloadProgress.hidden = false;
-  elements.downloadProgressText.textContent = completed + "/" + total + " · " + formatDownloadBytes(totalBytes) + (expectedBytes > 0 ? " / " + formatDownloadBytes(expectedBytes) : "");
+  elements.downloadProgressText.textContent = completed + "/" + total + " · " + formatDownloadBytes(totalBytes) + (expectedBytes > 0 ? " / " + formatDownloadBytes(expectedBytes) : "") + " · " + percent.toFixed(1) + "%";
   elements.downloadProgressStats.textContent = formatDownloadBytes(speed) + "/с · осталось " + formatDownloadEta(eta);
   elements.downloadProgressFill.style.width = percent.toFixed(1) + "%";
 }
