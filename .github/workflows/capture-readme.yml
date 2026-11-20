@@ -216,6 +216,10 @@ jobs:
             console.log('Captured all-tracks GIF frames:', frame, 'categories:', groups);
             await page.goto(captureUrl + '&zip-test=1', { waitUntil: 'domcontentloaded', timeout: 90000 });
             await waitForLibrary();
+            await page.locator('#albumSort').selectOption('tracks-desc');
+            const sortedTrackCounts = await page.locator('#albumGrid .album-card:not([data-album-id="__all_tracks__"]) .album-track-count').evaluateAll(nodes => nodes.map(node => Number.parseInt(node.textContent || '0', 10)));
+            if (sortedTrackCounts.some((value, index) => index > 0 && sortedTrackCounts[index - 1] < value)) throw new Error('Album track-count sorting is incorrect');
+            await page.locator('#albumSort').selectOption('default');
             const smallestAlbum = await page.locator('#albumGrid .album-card:not([data-album-id="__all_tracks__"])').evaluateAll(cards => {
               return cards.map((card, index) => ({
                 index,
@@ -225,6 +229,11 @@ jobs:
             if (smallestAlbum) {
               await page.locator('#albumGrid .album-card:not([data-album-id="__all_tracks__"])').nth(smallestAlbum.index).click();
               await page.locator('#playlistOverlay.open').waitFor({ state: 'visible', timeout: 30000 });
+              await page.locator('#trackList .track-row').first().locator('[data-track-select]').click();
+              const selectedLabel = await page.locator('#selectedTrackCount').textContent();
+              if (!selectedLabel.includes('1') || await page.locator('#downloadSelectedBtn').isDisabled()) throw new Error('Track selection control did not update');
+              await page.locator('#trackList .track-row').first().locator('[data-track-select]').click();
+              if (!(await page.locator('#downloadSelectedBtn').isDisabled())) throw new Error('Track selection did not clear');
               await page.evaluate(() => {
                 const state = { options: null, chunks: [], bytes: null, completed: false };
                 Object.defineProperty(window, "showSaveFilePicker", {
@@ -265,6 +274,34 @@ jobs:
                 state: Boolean(window.__gitwaveSaveAsTest)
               }));
               if (pickerReady.picker !== 'function' || !pickerReady.state) throw new Error('Unable to install the Save As test dialog: ' + JSON.stringify(pickerReady));
+              await page.locator('#trackList .track-row').first().locator('[data-track-select]').click();
+              await page.locator('#downloadSelectedBtn').click();
+              await page.waitForFunction(() => window.__gitwaveSaveAsTest?.completed && window.__gitwaveSaveAsTest?.bytes?.length > 0, null, { timeout: 180000 });
+              const selectedZip = await page.evaluate(() => {
+                const bytes = window.__gitwaveSaveAsTest.bytes;
+                const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+                let end = -1;
+                for (let i = bytes.length - 22; i >= Math.max(0, bytes.length - 65558); i--) if (view.getUint32(i, true) === 0x06054b50) { end = i; break; }
+                return { name: window.__gitwaveSaveAsTest.options?.suggestedName || '', header: view.getUint32(0, true), entries: end >= 0 ? view.getUint16(end + 10, true) : 0 };
+              });
+              if (!selectedZip.name.includes('Выбранные треки') || selectedZip.header !== 0x04034b50 || selectedZip.entries !== 1) throw new Error('Selected-track ZIP validation failed: ' + JSON.stringify(selectedZip));
+              await page.locator('#trackList .track-select-btn[aria-pressed="true"]').click();
+              await page.evaluate(() => {
+                window.__gitwaveSaveAsTest.options = null;
+                window.__gitwaveSaveAsTest.chunks = [];
+                window.__gitwaveSaveAsTest.bytes = null;
+                window.__gitwaveSaveAsTest.completed = false;
+              });
+              await page.locator('#trackList .track-row').first().locator('[data-track-download]').click();
+              await page.waitForFunction(() => window.__gitwaveSaveAsTest?.completed && window.__gitwaveSaveAsTest?.bytes?.length > 0, null, { timeout: 180000 });
+              const singleFile = await page.evaluate(() => ({ name: window.__gitwaveSaveAsTest.options?.suggestedName || '', size: window.__gitwaveSaveAsTest.bytes?.length || 0 }));
+              if (!/\.(mp3|ogg|wav)$/i.test(singleFile.name) || singleFile.size <= 0) throw new Error('Individual track download validation failed: ' + JSON.stringify(singleFile));
+              await page.evaluate(() => {
+                window.__gitwaveSaveAsTest.options = null;
+                window.__gitwaveSaveAsTest.chunks = [];
+                window.__gitwaveSaveAsTest.bytes = null;
+                window.__gitwaveSaveAsTest.completed = false;
+              });
               await page.locator('#downloadZipBtn').click();
               await page.waitForFunction(() => Boolean(window.__gitwaveSaveAsTest?.options), null, { timeout: 10000 });
               await page.waitForFunction(() => window.__gitwaveSaveAsTest?.completed && window.__gitwaveSaveAsTest?.bytes?.length > 0, null, { timeout: 180000 }).catch(async error => {
