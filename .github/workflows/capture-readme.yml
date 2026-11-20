@@ -45,11 +45,9 @@ jobs:
           (async () => {
             const browser = await chromium.launch({ headless: true });
             const page = await browser.newPage({ viewport: { width: 1440, height: 1000 }, deviceScaleFactor: 1 });
+            const pageErrors = [];
             page.setDefaultTimeout(60000);
-            page.on('pageerror', error => {
-              if (!window.__gitwaveCaptureErrors) window.__gitwaveCaptureErrors = [];
-              window.__gitwaveCaptureErrors.push(String(error));
-            });
+            page.on('pageerror', error => pageErrors.push(String(error)));
             page.on('console', message => {
               if (message.type() === 'error') console.error('PAGE CONSOLE:', message.text());
             });
@@ -70,7 +68,7 @@ jobs:
                 empty: document.querySelector('#emptyTitle')?.textContent || '',
                 message: document.querySelector('#emptyMessage')?.textContent || '',
                 grid: document.querySelector('#albumGrid')?.innerHTML?.slice(0, 1200) || '',
-                errors: window.__gitwaveCaptureErrors || []
+                errors: pageErrors
               }));
               throw new Error('GitWave library did not finish loading: ' + JSON.stringify(state));
             });
