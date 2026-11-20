@@ -127,6 +127,11 @@ body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;ba
 .playlist-topline{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:17px 20px;border-bottom:1px solid rgba(63,63,70,.56);background:rgba(12,12,15,.32)}
 .playlist-breadcrumb{display:flex;align-items:center;gap:9px;color:#85818f;font-size:10px;font-weight:800;letter-spacing:1.3px;text-transform:uppercase}
 .playlist-breadcrumb span{color:#c4b5fd}
+.playlist-topline-actions{display:flex;align-items:center;gap:8px;margin-left:auto}
+.download-zip-btn{height:34px;display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:0 12px;border:1px solid rgba(var(--active-rgb),.42);border-radius:8px;background:linear-gradient(135deg,rgba(var(--active-rgb),.2),rgba(var(--active-accent-rgb),.12));color:#e7e8ec;font-size:10px;font-weight:800;white-space:nowrap;cursor:pointer;transition:all .2s,background .7s,border-color .7s}
+.download-zip-btn:hover:not(:disabled){transform:translateY(-1px);border-color:rgba(var(--active-rgb),.72);background:rgba(var(--active-rgb),.24)}
+.download-zip-btn:disabled{opacity:.55;cursor:wait}
+.download-zip-btn svg{width:15px;height:15px;flex:none;color:rgb(var(--active-rgb))}
 .close-playlist{width:32px;height:32px;display:grid;place-items:center;flex:none;border:1px solid rgba(63,63,70,.8);border-radius:8px;background:rgba(255,255,255,.04);color:#a1a1aa;cursor:pointer;transition:all .2s}
 .close-playlist:hover{background:rgba(239,68,68,.12);border-color:rgba(239,68,68,.4);color:#fca5a5}
 .close-playlist svg{width:16px;height:16px}
@@ -319,7 +324,7 @@ body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;ba
 <div class="playlist-overlay" id="playlistOverlay" aria-hidden="true">
 <div class="playlist-scrim" id="playlistScrim"></div><div class="playlist-ambient" id="playlistAmbient"></div>
 <section class="playlist-window" role="dialog" aria-modal="true" aria-label="Плейлист альбома">
-<div class="playlist-topline"><div class="playlist-breadcrumb">GITWAVE <span>/</span> PLAYLIST</div><button class="close-playlist" id="closePlaylist" type="button" aria-label="Закрыть плейлист"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m18 6-12 12M6 6l12 12"/></svg></button></div>
+<div class="playlist-topline"><div class="playlist-breadcrumb">GITWAVE <span>/</span> PLAYLIST</div><div class="playlist-topline-actions"><button class="download-zip-btn" id="downloadZipBtn" type="button" title="Скачать альбом в ZIP-архиве"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0 4-4m-4 4-4-4"/><path d="M4 16v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></svg><span id="downloadZipLabel">Скачать ZIP</span></button><button class="close-playlist" id="closePlaylist" type="button" aria-label="Закрыть плейлист"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m18 6-12 12M6 6l12 12"/></svg></button></div></div>
 <div class="playlist-body">
 <aside class="playlist-aside"><div class="playlist-cover-shell"><img class="playlist-cover" id="playlistCover" alt="Обложка альбома"><div class="all-cover-mosaic playlist-cover-mosaic" id="playlistCoverMosaic" hidden></div><div class="playlist-cover-placeholder" id="playlistCoverFallback"><svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2"><circle cx="32" cy="32" r="23"/><circle cx="32" cy="32" r="15"/><circle cx="32" cy="32" r="5" fill="currentColor" stroke="none"/></svg></div></div><h2 class="playlist-album-title" id="playlistAlbumTitle">Альбом</h2><p class="playlist-album-meta" id="playlistAlbumMeta">0 треков</p><div class="playlist-actions"><button class="play-all-btn" id="playAllBtn" type="button" aria-label="Слушать"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.5c0-.8.87-1.28 1.54-.85l10.2 6.5a1 1 0 0 1 0 1.7l-10.2 6.5A1 1 0 0 1 8 18.5v-13Z"/></svg><span>Слушать</span></button><button class="playlist-secondary" id="shuffleAlbumBtn" type="button">Перемешать</button></div></aside>
 <div class="playlist-right"><label class="playlist-search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7.5"/><path d="m20 20-4-4"/></svg><input id="playlistSearch" type="search" placeholder="Найти трек в этом альбоме..." autocomplete="off" aria-label="Найти трек в этом альбоме"></label><div class="track-heading"><h3>Треки альбома</h3><span id="trackCount">0 TRACKS</span></div><div class="track-list" id="trackList"></div></div>
@@ -380,6 +385,8 @@ const elements = {
   scrim: document.getElementById("playlistScrim"),
   ambient: document.getElementById("playlistAmbient"),
   closePlaylist: document.getElementById("closePlaylist"),
+  downloadZip: document.getElementById("downloadZipBtn"),
+  downloadZipLabel: document.getElementById("downloadZipLabel"),
   playlistCover: document.getElementById("playlistCover"),
   playlistCoverMosaic: document.getElementById("playlistCoverMosaic"),
   playlistCoverFallback: document.getElementById("playlistCoverFallback"),
@@ -443,6 +450,8 @@ let shuffleCyclePlayed = new Set();
 let previousVolume = 0.8;
 let isSeeking = false;
 let toastTimer = null;
+let zipDownloadActive = false;
+let zipDownloadToken = 0;
 let audioReady = false;
 let audioContext = null;
 let audioAnalyser = null;
