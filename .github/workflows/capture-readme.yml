@@ -1,15 +1,13 @@
 name: Capture GitWave screenshots
 
 on:
-  push:
+  workflow_run:
+    workflows:
+      - pages build and deployment
+    types:
+      - completed
     branches:
       - main
-    paths:
-      - index.html
-      - README.md
-      - music/**
-      - .github/workflows/capture-readme.yml
-  workflow_dispatch:
 
 permissions:
   contents: write
@@ -20,11 +18,21 @@ concurrency:
 
 jobs:
   screenshots:
+    if: >-
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.head_branch == 'main' &&
+      github.event.workflow_run.head_repository.full_name == github.repository &&
+      !contains(github.event.workflow_run.head_commit.message, 'Add GitWave all-tracks animated preview')
     runs-on: ubuntu-latest
+    env:
+      DEPLOYED_SHA: \${{ github.event.workflow_run.head_sha }}
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: main
+          ref: \${{ github.event.workflow_run.head_sha }}
+      - name: Confirm Pages deployment
+        run: |
+          echo "GitHub Pages deployment completed successfully for $DEPLOYED_SHA"
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -36,12 +44,11 @@ jobs:
           sudo apt-get install -y ffmpeg
       - name: Capture GitWave screens and all-tracks GIF
         env:
-          PLAYWRIGHT_PATH: ${{ runner.temp }}/gitwave-capture/node_modules/playwright
+          PLAYWRIGHT_PATH: \${{ runner.temp }}/gitwave-capture/node_modules/playwright
         run: |
           mkdir -p docs/screenshots /tmp/gitwave-gif-frames
           cat > capture-readme.cjs <<'EOF'
           const { chromium } = require(process.env.PLAYWRIGHT_PATH);
-          const fs = require('node:fs');
           (async () => {
             const browser = await chromium.launch({ headless: true });
             const page = await browser.newPage({ viewport: { width: 1440, height: 1000 }, deviceScaleFactor: 1 });
@@ -51,9 +58,11 @@ jobs:
             page.on('console', message => {
               if (message.type() === 'error') console.error('PAGE CONSOLE:', message.text());
             });
-            await page.goto('https://gamooda.github.io/gitwave/', { waitUntil: 'networkidle', timeout: 180000 }).catch(async error => {
+            const captureUrl = 'https://gamooda.github.io/gitwave/?capture=' + process.env.DEPLOYED_SHA;
+            console.log('Opening deployed revision:', process.env.DEPLOYED_SHA, captureUrl);
+            await page.goto(captureUrl, { waitUntil: 'networkidle', timeout: 180000 }).catch(async error => {
               console.error('Initial navigation did not reach networkidle:', error.message);
-              await page.goto('https://gamooda.github.io/gitwave/', { waitUntil: 'domcontentloaded', timeout: 180000 });
+              await page.goto(captureUrl, { waitUntil: 'domcontentloaded', timeout: 180000 });
             });
             await page.waitForFunction(() => {
               const grid = document.querySelector('#albumGrid');
@@ -115,7 +124,6 @@ jobs:
               });
               const startTop = heading.evaluate(el => el.offsetTop);
               const endTop = rowLocators.length ? rowLocators[rowLocators.length - 1].top : startTop;
-              const maxTop = Math.max(0, endTop - list.evaluate(el => el.offsetTop) - list.evaluate(el => el.clientHeight) + 180);
               const from = await list.evaluate(el => el.scrollTop);
               const target = Math.max(from, endTop - await list.evaluate(el => el.clientHeight) + 110);
               const steps = Math.max(4, Math.ceil(Math.abs(target - from) / 125));
@@ -141,11 +149,26 @@ jobs:
           ffmpeg -y -framerate 4 -i /tmp/gitwave-gif-frames/frame-%04d.png -vf "fps=4,scale=960:-1:flags=lanczos,split[s0][s1];[s0]palettegen=max_colors=128:stats_mode=diff[p];[s1][p]paletteuse=dither=bayer:bayer_scale=3:diff_mode=rectangle" -loop 0 docs/screenshots/all-tracks.gif
       - name: Commit screenshots and GIF
         run: |
+          mkdir -p /tmp/gitwave-capture-result
+          cp docs/screenshots/library.png /tmp/gitwave-capture-result/library.png
+          cp docs/screenshots/all-tracks.gif /tmp/gitwave-capture-result/all-tracks.gif
           git config user.name github-actions[bot]
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git fetch origin main
+          git checkout -B main origin/main
+          mkdir -p docs/screenshots
+          cp /tmp/gitwave-capture-result/library.png docs/screenshots/library.png
+          cp /tmp/gitwave-capture-result/all-tracks.gif docs/screenshots/all-tracks.gif
           git rm -f docs/screenshots/playlist.png || true
           git add docs/screenshots/library.png docs/screenshots/all-tracks.gif
           if ! git diff --cached --quiet; then
             git commit -m "Add GitWave all-tracks animated preview"
-            git push origin main
+            for attempt in 1 2 3; do
+              if git push origin main; then
+                exit 0
+              fi
+              git fetch origin main
+              git rebase origin/main
+            done
+            exit 1
           fi
