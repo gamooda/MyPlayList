@@ -236,11 +236,11 @@ jobs:
                     state.bytes = null;
                     state.completed = false;
                     return {
-                      createWritable: async () => new WritableStream({
-                        write(chunk) {
+                      createWritable: async () => ({
+                        async write(chunk) {
                           state.chunks.push(new Uint8Array(chunk));
                         },
-                        close() {
+                        async close() {
                           const size = state.chunks.reduce((sum, part) => sum + part.length, 0);
                           const result = new Uint8Array(size);
                           let offset = 0;
@@ -251,7 +251,7 @@ jobs:
                           state.bytes = result;
                           state.completed = true;
                         },
-                        abort() {
+                        async abort() {
                           state.completed = false;
                         }
                       })
