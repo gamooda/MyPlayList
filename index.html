@@ -6,8 +6,6 @@
 <meta name="theme-color" content="#09090b">
 <meta name="description" content="Твоя музыкальная коллекция.">
 <title>gitwave</title>
-<link rel="icon" type="image/svg+xml" href="./ico-main/gitwave-icon.svg">
-<link rel="alternate icon" href="./ico-main/gitwave-icon.svg">
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="preconnect" href="https://raw.githubusercontent.com" crossorigin>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -24,13 +22,9 @@ body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;ba
 ::-webkit-scrollbar{width:8px;height:8px;background:#09090b}::-webkit-scrollbar-track{background:#09090b;border-radius:4px}::-webkit-scrollbar-thumb{background:#333338;border-radius:4px}::-webkit-scrollbar-thumb:hover{background:#4a4a50}button,input{font:inherit}button{color:inherit}button:focus-visible,input:focus-visible{outline:2px solid #a78bfa;outline-offset:3px}button{border:0}button:disabled{opacity:.35;cursor:not-allowed}
 .app{width:100%;max-width:1180px;margin:0 auto}
 .topbar{display:flex;justify-content:space-between;align-items:center;gap:18px;margin:0 auto 25px}
-.brand-lockup{display:flex;align-items:center;gap:12px;min-width:0}
-.brand-emblem{width:46px;height:46px;display:grid;place-items:center;flex:none;border-radius:14px;background:linear-gradient(145deg,rgba(139,92,246,.18),rgba(24,24,27,.92));border:1px solid rgba(139,92,246,.3);box-shadow:0 5px 18px rgba(0,0,0,.28),inset 0 1px 0 rgba(255,255,255,.07)}
-.brand-emblem svg{width:31px;height:31px;display:block}.brand-logo{width:100%;height:100%;display:block;object-fit:contain;padding:5px;border-radius:12px}.brand-logo[hidden]{display:none}
-.brand-copy{display:flex;flex-direction:column;gap:0}
-.brand-name{font-size:23px;font-weight:800;letter-spacing:-.9px;line-height:1}
-.brand-name span{background:var(--primary-grad);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
-.brand-subtitle{color:#777783;font-size:9px;letter-spacing:1.8px;font-weight:800;text-transform:uppercase}
+.brand-lockup{display:flex;align-items:center;min-width:0}
+.brand-copy{display:flex;align-items:center}
+.brand-title{display:block;color:#e2e4e8;font-size:24px;font-weight:800;letter-spacing:-.7px;line-height:1}
 .top-actions{display:flex;align-items:center;gap:9px}
 .repo-link{height:38px;display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:0 13px;border:1px solid var(--border-light);border-radius:8px;background:rgba(24,24,27,.68);color:#c4c4cc;text-decoration:none;font-size:12px;font-weight:700;transition:all .22s ease;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
 .repo-link:hover{background:#23232b;border-color:#666;color:#fff;transform:translateY(-1px)}
@@ -75,10 +69,6 @@ body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;ba
 .album-subline{display:flex;align-items:center;justify-content:space-between;gap:8px;color:#777783;font-size:10px;font-weight:600}
 .album-subline span{display:inline-flex;align-items:center;gap:5px;min-width:0}
 .album-subline svg{width:12px;height:12px;flex:none;color:#8b5cf6}
-.album-cover-logo{position:absolute;right:10px;bottom:10px;z-index:5;max-width:38%;max-height:28%;width:auto;height:auto;object-fit:contain;filter:drop-shadow(0 3px 8px rgba(0,0,0,.72));pointer-events:none}
-.album-cover-logo[hidden]{display:none}
-.playlist-cover-logo{position:absolute;right:9px;bottom:9px;z-index:4;max-width:48%;max-height:27%;width:auto;height:auto;object-fit:contain;filter:drop-shadow(0 4px 10px rgba(0,0,0,.72));pointer-events:none}
-.playlist-cover-logo[hidden]{display:none}
 .empty-state{display:none;grid-column:1/-1;min-height:250px;align-items:center;justify-content:center;flex-direction:column;gap:11px;padding:30px 20px;border:1px dashed rgba(82,82,91,.58);border-radius:14px;background:rgba(24,24,27,.38);text-align:center;color:#a1a1aa}
 .empty-state.visible{display:flex;animation:cardAppear .35s ease both}
 .empty-state svg{width:37px;height:37px;color:#8b5cf6;opacity:.8}
@@ -175,11 +165,10 @@ body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;ba
 @keyframes spin{to{transform:rotate(360deg)}}@keyframes cardAppear{from{opacity:0;transform:translateY(17px)}to{opacity:1;transform:translateY(0)}}@keyframes eq{from{height:3px}to{height:13px}}
 @media(max-width:900px){.player-inner{grid-template-columns:minmax(140px,.8fr) minmax(280px,1.4fr);gap:13px}.volume-tools{grid-column:1/-1;justify-content:center;margin-top:-3px}.volume-tools .range{width:130px}.player-dock{padding-top:9px}.player-inner{row-gap:5px}.now-playing{grid-row:1/3}.player-center{grid-column:2;grid-row:1/3}.volume-tools{grid-column:1/-1;grid-row:3}.player-hint{display:none}:root{--dock-height:132px}}
 @media(max-width:680px){body{padding:19px 14px calc(var(--dock-height) + 30px)}.topbar{margin-bottom:21px}.album-grid{grid-template-columns:repeat(auto-fill,minmax(165px,1fr));gap:15px 12px}.album-card{padding:9px;border-radius:12px}.album-card-inner{gap:9px}.album-name{font-size:13px}.album-track-count{font-size:8px;padding:3px 5px}.album-subline{font-size:9px}.search-box{width:100%}.filterbar{gap:8px}.filterbar-meta{gap:10px}.sync-status{font-size:9px}.playlist-overlay{padding:13px 10px calc(var(--dock-height) + 14px)}.playlist-window{max-height:calc(100vh - var(--dock-height) - 27px)}.playlist-body{grid-template-columns:1fr;gap:18px;padding:17px;overflow-y:auto}.playlist-aside{display:grid;grid-template-columns:104px minmax(0,1fr);grid-template-rows:auto auto;column-gap:14px;align-items:center}.playlist-cover-shell{grid-column:1;grid-row:1/3;width:104px;margin:0}.playlist-album-title{grid-column:2;grid-row:1;align-self:end;font-size:18px}.playlist-album-meta{grid-column:2;grid-row:2;align-self:start;font-size:10px}.playlist-actions{margin-top:14px;grid-column:1/-1}.playlist-right{min-height:190px}.track-row{min-height:49px}.playlist-topline{padding:13px 15px}.player-inner{grid-template-columns:minmax(0,1fr) minmax(0,1.25fr);gap:8px}.player-cover-wrap{width:43px;height:43px}.now-playing{gap:8px}.player-track-title{font-size:10px}.player-album-title{font-size:9px}.transport{gap:6px}.icon-btn{width:27px;height:29px}.icon-btn svg{width:15px;height:15px}.main-play-btn{width:35px;height:35px}.player-center{gap:4px}.timeline{gap:5px}.time-label{min-width:29px;font-size:8px}.volume-tools{margin-top:-1px}.volume-tools .range{width:min(130px,32vw)}:root{--dock-height:124px}}
-@media(max-width:430px){.brand-name{font-size:20px}.brand-emblem{width:40px;height:40px}.brand-subtitle{font-size:8px;letter-spacing:1.4px}.repo-link{display:none}.album-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.album-card{padding:7px}.album-name{font-size:12px}.album-subline{font-size:8px}.album-subline svg{width:10px;height:10px}.sync-status{font-size:9px}.section-title{font-size:18px}.album-count{height:19px;min-width:21px;font-size:9px}.player-dock{padding-left:10px;padding-right:10px}.player-inner{column-gap:5px}.player-cover-wrap{width:37px;height:37px}.player-track-title{font-size:9px}.player-album-title{font-size:8px}.transport{gap:3px}.icon-btn{width:24px}.main-play-btn{width:32px;height:32px}.volume-tools{gap:5px}.volume-label{font-size:8px}}
+@media(max-width:430px){.repo-link{display:none}.album-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.album-card{padding:7px}.album-name{font-size:12px}.album-subline{font-size:8px}.album-subline svg{width:10px;height:10px}.sync-status{font-size:9px}.section-title{font-size:18px}.album-count{height:19px;min-width:21px;font-size:9px}.player-dock{padding-left:10px;padding-right:10px}.player-inner{column-gap:5px}.player-cover-wrap{width:37px;height:37px}.player-track-title{font-size:9px}.player-album-title{font-size:8px}.transport{gap:3px}.icon-btn{width:24px}.main-play-btn{width:32px;height:32px}.volume-tools{gap:5px}.volume-label{font-size:8px}}
 @media(hover:none){.album-card:active .album-cover-wrap{--cover-lift:-8px;--cover-depth:20px}.album-card:active .album-cover-wrap::before{transform:translateZ(-12px) translateY(10px) scale(.985)}.album-card:active .album-cover{transform:translateZ(17px)}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
 
-.brand-subtitle{display:none}
 .album-count{display:none}
 .library-section{padding-top:0}
 .filterbar-meta .sync-status{order:2}
@@ -242,7 +231,6 @@ body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;ba
 
 .repo-update-timer{height:38px;display:inline-flex;align-items:center;gap:8px;padding:0 12px;border:1px solid rgba(63,63,70,.68);border-radius:8px;background:rgba(24,24,27,.48);color:#aaa4b2;font-size:11px;font-weight:700;white-space:nowrap;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);font-variant-numeric:tabular-nums}
 .repo-update-dot{width:6px;height:6px;flex:none;border-radius:50%;background:#8b5cf6;box-shadow:0 0 9px rgba(139,92,246,.42)}
-.brand-emblem[hidden]{display:none!important}
 .playlist-cover-mosaic{transform:none;border-radius:10px;z-index:3}
 .playlist-cover-mosaic[hidden]{display:none}
 .playlist-cover-mosaic img{cursor:default}
@@ -286,12 +274,10 @@ body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;ba
 .track-list.grouped-tracks .track-title-wrap{gap:0}
 @media(max-width:680px){.track-group-heading{margin-top:10px;padding:9px 7px 7px}.track-group-title{font-size:10px}}
 
-.brand-wordmark{display:block;width:165px;height:40px;object-fit:contain;object-position:left center;filter:drop-shadow(0 2px 8px rgba(0,0,0,.24))}
-.brand-wordmark[hidden],.brand-wordmark-fallback[hidden]{display:none}
-.brand-wordmark-fallback{display:block;color:#e2e4e8;font-size:24px;font-weight:800;letter-spacing:-.7px;line-height:1}
+.brand-title{display:block;color:#e2e4e8;font-size:24px;font-weight:800;letter-spacing:-.7px;line-height:1}
 .all-tracks-art-icon{display:block;width:100%;height:100%;object-fit:cover;border-radius:9px}
 .all-tracks-art-icon[hidden]{display:none}
-@media(max-width:430px){.brand-wordmark{width:145px;height:35px}.brand-wordmark-fallback{font-size:21px}}
+@media(max-width:430px){.brand-title{font-size:21px}}
 
 .app-background-layer{position:fixed;inset:-3%;z-index:-2;pointer-events:none;background-position:center;background-size:cover;background-repeat:no-repeat;opacity:0;filter:blur(3px) brightness(.2) saturate(.9);transform:scale(1.075) translate3d(0,0,0);transition:opacity 1.85s cubic-bezier(.22,.61,.36,1),transform 5.6s cubic-bezier(.2,.7,.25,1);will-change:opacity,transform}
 .app-background-layer.is-active{opacity:.36;transform:scale(1.025) translate3d(0,-.4%,0)}
@@ -307,9 +293,7 @@ body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;ba
 <body>
 <div class="app">
 <header class="topbar">
-<div class="brand-lockup">
-<div class="brand-copy"><img class="brand-wordmark" id="gitwaveLogo" alt="gitwave" hidden><span class="brand-wordmark-fallback" id="gitwaveFallback">gitwave</span></div>
-</div>
+<div class="brand-lockup"><div class="brand-copy"><span class="brand-title">gitwave</span></div></div>
 <div class="top-actions">
 <a class="repo-link" id="repoLink" href="#" target="_blank" rel="noopener noreferrer" hidden><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 .9a11.1 11.1 0 0 0-3.51 21.63c.55.1.76-.24.76-.53v-2.07c-3.1.67-3.75-1.31-3.75-1.31-.5-1.29-1.24-1.64-1.24-1.64-1.01-.69.08-.68.08-.68 1.12.08 1.71 1.15 1.71 1.15 1 1.7 2.62 1.21 3.26.92.1-.72.39-1.21.71-1.49-2.47-.28-5.06-1.24-5.06-5.51 0-1.22.44-2.22 1.15-3-.12-.28-.5-1.43.11-2.98 0 0 .94-.3 3.05 1.14a10.6 10.6 0 0 1 5.55 0c2.11-1.44 3.05-1.14 3.05-1.14.61 1.55.23 2.7.12 2.98.71.78 1.14 1.78 1.14 3 0 4.28-2.59 5.22-5.07 5.5.4.35.76 1.03.76 2.08V22c0 .29.2.63.77.52A11.1 11.1 0 0 0 12 .9Z"/></svg>GitHub</a>
 <div class="repo-update-timer" id="repoUpdateTimer" title="Последнее изменение в GitHub-репозитории"><span class="repo-update-dot"></span><span id="repoUpdateText">Проверяем обновление…</span></div>
@@ -327,7 +311,7 @@ body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;ba
 <section class="playlist-window" role="dialog" aria-modal="true" aria-label="Плейлист альбома">
 <div class="playlist-topline"><div class="playlist-breadcrumb">GITWAVE <span>/</span> PLAYLIST</div><button class="close-playlist" id="closePlaylist" type="button" aria-label="Закрыть плейлист"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m18 6-12 12M6 6l12 12"/></svg></button></div>
 <div class="playlist-body">
-<aside class="playlist-aside"><div class="playlist-cover-shell"><img class="playlist-cover" id="playlistCover" alt="Обложка альбома"><div class="all-cover-mosaic playlist-cover-mosaic" id="playlistCoverMosaic" hidden></div><img class="playlist-cover-logo" id="playlistLogo" alt="" hidden><div class="playlist-cover-placeholder" id="playlistCoverFallback"><svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2"><circle cx="32" cy="32" r="23"/><circle cx="32" cy="32" r="15"/><circle cx="32" cy="32" r="5" fill="currentColor" stroke="none"/></svg></div></div><h2 class="playlist-album-title" id="playlistAlbumTitle">Альбом</h2><p class="playlist-album-meta" id="playlistAlbumMeta">0 треков</p><div class="playlist-actions"><button class="play-all-btn" id="playAllBtn" type="button" aria-label="Слушать"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.5c0-.8.87-1.28 1.54-.85l10.2 6.5a1 1 0 0 1 0 1.7l-10.2 6.5A1 1 0 0 1 8 18.5v-13Z"/></svg><span>Слушать</span></button><button class="playlist-secondary" id="shuffleAlbumBtn" type="button">Перемешать</button></div></aside>
+<aside class="playlist-aside"><div class="playlist-cover-shell"><img class="playlist-cover" id="playlistCover" alt="Обложка альбома"><div class="all-cover-mosaic playlist-cover-mosaic" id="playlistCoverMosaic" hidden></div><div class="playlist-cover-placeholder" id="playlistCoverFallback"><svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2"><circle cx="32" cy="32" r="23"/><circle cx="32" cy="32" r="15"/><circle cx="32" cy="32" r="5" fill="currentColor" stroke="none"/></svg></div></div><h2 class="playlist-album-title" id="playlistAlbumTitle">Альбом</h2><p class="playlist-album-meta" id="playlistAlbumMeta">0 треков</p><div class="playlist-actions"><button class="play-all-btn" id="playAllBtn" type="button" aria-label="Слушать"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.5c0-.8.87-1.28 1.54-.85l10.2 6.5a1 1 0 0 1 0 1.7l-10.2 6.5A1 1 0 0 1 8 18.5v-13Z"/></svg><span>Слушать</span></button><button class="playlist-secondary" id="shuffleAlbumBtn" type="button">Перемешать</button></div></aside>
 <div class="playlist-right"><label class="playlist-search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7.5"/><path d="m20 20-4-4"/></svg><input id="playlistSearch" type="search" placeholder="Найти трек в этом альбоме..." autocomplete="off" aria-label="Найти трек в этом альбоме"></label><div class="track-heading"><h3>Треки альбома</h3><span id="trackCount">0 TRACKS</span></div><div class="track-list" id="trackList"></div></div>
 </div>
 </section>
@@ -349,7 +333,7 @@ const GITHUB_REPO = "";
 
 const MUSIC_DIR = "music";
 const CACHE_TTL = 20 * 60 * 1000;
-const CACHE_PREFIX = "mixtape_music_library_v3";
+const CACHE_PREFIX = "mixtape_music_library_v4";
 const DURATION_CACHE_PREFIX = "mixtape_track_durations_v1";
 const SETTINGS_KEY = "pulse_player_settings_v1";
 const ICON_PLAY = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.5c0-.8.87-1.28 1.54-.85l10.2 6.5a1 1 0 0 1 0 1.7l-10.2 6.5A1 1 0 0 1 8 18.5v-13Z"/></svg>';
@@ -387,9 +371,6 @@ const elements = {
   playlistCover: document.getElementById("playlistCover"),
   playlistCoverMosaic: document.getElementById("playlistCoverMosaic"),
   playlistCoverFallback: document.getElementById("playlistCoverFallback"),
-  playlistLogo: document.getElementById("playlistLogo"),
-  gitwaveLogo: document.getElementById("gitwaveLogo"),
-  gitwaveFallback: document.getElementById("gitwaveFallback"),
   playlistTitle: document.getElementById("playlistAlbumTitle"),
   playlistMeta: document.getElementById("playlistAlbumMeta"),
   trackCount: document.getElementById("trackCount"),
@@ -423,7 +404,7 @@ let repository = resolveRepository();
 let repositoryBranch = null;
 let repositorySourcePath = "";
 let repositorySourceResolved = false;
-let repositoryAssets = { background: "", backgroundFallback: "", logo: "", logoFallback: "", gitwave: "", gitwaveFallback: "", allTracksIcon: "", allTracksIconFallback: "" };
+let repositoryAssets = { background: "", backgroundFallback: "", allTracksIcon: "", allTracksIconFallback: "" };
 let durationCache = loadDurationCache();
 let durationScanGeneration = 0;
 let audioFallbackTimer = null;
@@ -736,51 +717,6 @@ function setPageBackground(url, fallbackUrl = "") {
   crossfadeBackground(document.body, url || "", fallbackUrl, "app");
 }
 
-function applyBrandLogo(url, fallbackUrl = "") {
-  const image = elements.gitwaveLogo;
-  const fallback = elements.gitwaveFallback;
-  if (!image || !fallback) return;
-  if (!url) {
-    image.hidden = true;
-    image.removeAttribute("src");
-    fallback.hidden = false;
-    return;
-  }
-  image.hidden = false;
-  fallback.hidden = true;
-  image.dataset.fallbackUsed = "0";
-  image.onerror = () => {
-    if (fallbackUrl && image.dataset.fallbackUsed !== "1") {
-      image.dataset.fallbackUsed = "1";
-      image.src = fallbackUrl;
-    } else {
-      image.hidden = true;
-      fallback.hidden = false;
-    }
-  };
-  image.src = url;
-}
-
-function applyOptionalImage(image, url, fallbackUrl = "") {
-  if (!image) return;
-  if (!url) {
-    image.hidden = true;
-    image.removeAttribute("src");
-    return;
-  }
-  image.hidden = false;
-  image.onerror = () => {
-    if (fallbackUrl && image.src !== fallbackUrl) {
-      image.onerror = null;
-      image.src = fallbackUrl;
-    } else {
-      image.hidden = true;
-      image.removeAttribute("src");
-    }
-  };
-  image.src = url;
-}
-
 function applyAlbumTheme(album) {
   const palette = album && validPalette(album.palette) ? album.palette : DEFAULT_PALETTE;
   const colors = paletteCss(palette);
@@ -1063,7 +999,13 @@ function readCache(allowExpired = false) {
   }
   if (!cached || !Array.isArray(cached.albums)) return null;
   if (!allowExpired && Date.now() - cached.savedAt > CACHE_TTL) return null;
-  repositoryAssets = cached.assets || { background: "", backgroundFallback: "", logo: "", logoFallback: "", gitwave: "", gitwaveFallback: "", allTracksIcon: "", allTracksIconFallback: "" };
+  const cachedAssets = cached.assets || {};
+  repositoryAssets = {
+    background: cachedAssets.background || "",
+    backgroundFallback: cachedAssets.backgroundFallback || "",
+    allTracksIcon: cachedAssets.allTracksIcon || "",
+    allTracksIconFallback: cachedAssets.allTracksIconFallback || ""
+  };
   repositorySourceResolved = typeof cached.sourcePath === "string";
   repositoryBranch = repositorySourceResolved ? cached.branch || repositoryBranch : null;
   repositorySourcePath = repositorySourceResolved ? cached.sourcePath : "";
@@ -1169,7 +1111,6 @@ function findNamedPng(files, name) {
 }
 
 function applyLibraryAssets() {
-  applyBrandLogo(repositoryAssets.gitwave, repositoryAssets.gitwaveFallback);
   if (!currentAlbum) applyAlbumTheme(null);
 }
 
@@ -1254,11 +1195,9 @@ function makeAlbumRecord(directoryName, directoryPath, files) {
   previewCandidates.sort((a, b) => previewOrder.indexOf(a.name.split(".").pop().toLowerCase()) - previewOrder.indexOf(b.name.split(".").pop().toLowerCase()));
   const preview = previewCandidates[0];
   const background = findNamedPng(files, "background");
-  const logo = findNamedPng(files, "logo");
   const tracks = files.filter(file => file.type === "file" && /\.(mp3|ogg|wav)$/i.test(file.name)).sort((a, b) => a.name.localeCompare(b.name, "ru", { numeric: true, sensitivity: "base" })).map(makeTrackRecord);
   const coverMedia = preview ? imageMediaUrls(preview.path, preview.download_url || "", preview.sha || "") : { url: "", fallbackUrl: "" };
   const backgroundMedia = background ? imageMediaUrls(background.path, background.download_url || "", background.sha || "") : { url: "", fallbackUrl: "" };
-  const logoMedia = logo ? imageMediaUrls(logo.path, logo.download_url || "", logo.sha || "") : { url: "", fallbackUrl: "" };
   return {
     id: directoryPath,
     folder: directoryName,
@@ -1268,20 +1207,12 @@ function makeAlbumRecord(directoryName, directoryPath, files) {
     coverFallback: coverMedia.fallbackUrl,
     background: backgroundMedia.url,
     backgroundFallback: backgroundMedia.fallbackUrl,
-    logo: logoMedia.url,
-    logoFallback: logoMedia.fallbackUrl,
     tracks
   };
 }
 
-function setBrandAssetsFromFiles(files) {
-  const gitwave = files.find(file => file.type === "file" && file.name.toLowerCase() === "gitwave.svg");
+function setLibraryIconsFromFiles(files) {
   const allTracksIcon = files.find(file => file.type === "file" && file.name.toLowerCase() === "all_tracks.svg") || files.find(file => file.type === "file" && file.name.toLowerCase() === "all_tacks.svg");
-  if (gitwave) {
-    const media = imageMediaUrls(gitwave.path, gitwave.download_url || "", gitwave.sha || "");
-    repositoryAssets.gitwave = media.url;
-    repositoryAssets.gitwaveFallback = media.fallbackUrl;
-  }
   if (allTracksIcon) {
     const media = imageMediaUrls(allTracksIcon.path, allTracksIcon.download_url || "", allTracksIcon.sha || "");
     repositoryAssets.allTracksIcon = media.url;
@@ -1289,7 +1220,7 @@ function setBrandAssetsFromFiles(files) {
   }
 }
 
-function setBrandAssetsFromTree(tree) {
+function setLibraryIconsFromTree(tree) {
   const sourceRoot = String(repositorySourcePath || "").replace(/^\/+|\/+$/g, "");
   const prefixes = [...new Set([sourceRoot ? `${sourceRoot}/ico-main/` : "ico-main/", "ico-main/"])];
   const files = tree.filter(item => item.type === "blob" && prefixes.some(prefix => item.path.toLowerCase().startsWith(prefix.toLowerCase()))).map(item => ({
@@ -1299,18 +1230,18 @@ function setBrandAssetsFromTree(tree) {
     sha: item.sha,
     size: item.size
   }));
-  setBrandAssetsFromFiles(files);
+  setLibraryIconsFromFiles(files);
 }
 
-async function setBrandAssetsFromContents() {
+async function setLibraryIconsFromContents() {
   const sourceRoot = String(repositorySourcePath || "").replace(/^\/+|\/+$/g, "");
   const folders = [...new Set([sourceRoot ? `${sourceRoot}/ico-main` : "ico-main", "ico-main"])];
   for (const folder of folders) {
     try {
       const files = await githubRequest(folder);
       if (Array.isArray(files)) {
-        setBrandAssetsFromFiles(files);
-        if (repositoryAssets.gitwave && repositoryAssets.allTracksIcon) return;
+        setLibraryIconsFromFiles(files);
+        if (repositoryAssets.allTracksIcon) return;
       }
     } catch (error) {
       continue;
@@ -1319,24 +1250,18 @@ async function setBrandAssetsFromContents() {
 }
 
 function assetsFromRootFiles(files) {
-  repositoryAssets = { background: "", backgroundFallback: "", logo: "", logoFallback: "", gitwave: repositoryAssets.gitwave || "", gitwaveFallback: repositoryAssets.gitwaveFallback || "", allTracksIcon: repositoryAssets.allTracksIcon || "", allTracksIconFallback: repositoryAssets.allTracksIconFallback || "" };
+  repositoryAssets = { background: "", backgroundFallback: "", allTracksIcon: repositoryAssets.allTracksIcon || "", allTracksIconFallback: repositoryAssets.allTracksIconFallback || "" };
   const rootBackground = findNamedPng(files, "background");
-  const rootLogo = findNamedPng(files, "logo");
   if (rootBackground) {
     const media = imageMediaUrls(rootBackground.path, rootBackground.download_url || "", rootBackground.sha || "");
     repositoryAssets.background = media.url;
     repositoryAssets.backgroundFallback = media.fallbackUrl;
   }
-  if (rootLogo) {
-    const media = imageMediaUrls(rootLogo.path, rootLogo.download_url || "", rootLogo.sha || "");
-    repositoryAssets.logo = media.url;
-    repositoryAssets.logoFallback = media.fallbackUrl;
-  }
 }
 
 async function scanMusicWithTree(treeData) {
   const tree = treeData.tree;
-  setBrandAssetsFromTree(tree);
+  setLibraryIconsFromTree(tree);
   const sourceRoot = String(repositorySourcePath || "").replace(/^\/+|\/+$/g, "");
   const expectedMusicPath = [sourceRoot, MUSIC_DIR].filter(Boolean).join("/");
   const rootEntry = tree.find(item => item.type === "tree" && item.path.toLowerCase() === expectedMusicPath.toLowerCase());
@@ -1350,7 +1275,7 @@ async function scanMusicWithTree(treeData) {
   const rootAssets = rootFiles.map(item => ({ type: "file", name: item.path.split("/").pop(), path: item.path, sha: item.sha, size: item.size }));
   const musicAssets = musicRootFiles.map(item => ({ type: "file", name: item.path.split("/").pop(), path: item.path, sha: item.sha, size: item.size }));
   assetsFromRootFiles(musicAssets);
-  if (!repositoryAssets.background || !repositoryAssets.logo) {
+  if (!repositoryAssets.background) {
     const fallbackAssets = [...rootAssets];
     if (!repositoryAssets.background) {
       const file = findNamedPng(fallbackAssets, "background");
@@ -1358,14 +1283,6 @@ async function scanMusicWithTree(treeData) {
         const media = imageMediaUrls(file.path, "", file.sha || "");
         repositoryAssets.background = media.url;
         repositoryAssets.backgroundFallback = media.fallbackUrl;
-      }
-    }
-    if (!repositoryAssets.logo) {
-      const file = findNamedPng(fallbackAssets, "logo");
-      if (file) {
-        const media = imageMediaUrls(file.path, "", file.sha || "");
-        repositoryAssets.logo = media.url;
-        repositoryAssets.logoFallback = media.fallbackUrl;
       }
     }
   }
@@ -1392,7 +1309,7 @@ async function scanMusicWithContents() {
   const root = await githubRequest(musicDirectory.path);
   if (!Array.isArray(root)) throw new Error(`Путь «${musicDirectory.path}» найден, но GitHub не вернул список его содержимого.`);
   assetsFromRootFiles(root);
-  await setBrandAssetsFromContents();
+  await setLibraryIconsFromContents();
   const directories = root.filter(item => item.type === "dir").sort((a, b) => a.name.localeCompare(b.name, "ru", { numeric: true, sensitivity: "base" }));
   return await mapWithLimit(directories, 4, async directory => {
     const path = `${musicDirectory.path}/${directory.name}`;
@@ -1501,33 +1418,28 @@ function refreshAlbumMediaFromTree(albumList, tree) {
     previews.sort((a, b) => order.indexOf(a.name.split(".").pop().toLowerCase()) - order.indexOf(b.name.split(".").pop().toLowerCase()));
     const preview = previews[0];
     const background = findNamedPng(contents, "background");
-    const logo = findNamedPng(contents, "logo");
     const coverMedia = preview ? imageMediaUrls(preview.path, "", preview.sha) : { url: "", fallbackUrl: "" };
     const backgroundMedia = background ? imageMediaUrls(background.path, "", background.sha) : { url: "", fallbackUrl: "" };
-    const logoMedia = logo ? imageMediaUrls(logo.path, "", logo.sha) : { url: "", fallbackUrl: "" };
     album.cover = coverMedia.url;
     album.coverFallback = coverMedia.fallbackUrl;
     album.background = backgroundMedia.url;
     album.backgroundFallback = backgroundMedia.fallbackUrl;
-    album.logo = logoMedia.url;
-    album.logoFallback = logoMedia.fallbackUrl;
   });
 }
 
-async function ensureBrandAssets(force = false) {
-  if (!force && repositoryAssets.gitwave && repositoryAssets.allTracksIcon) return;
+async function ensureLibraryIcons(force = false) {
+  if (!force && repositoryAssets.allTracksIcon) return;
   try {
     const treeData = await fetchRepositoryTree();
     if (treeData && !treeData.truncated) {
-      setBrandAssetsFromTree(treeData.tree);
+      setLibraryIconsFromTree(treeData.tree);
       if (force) refreshAlbumMediaFromTree(albums, treeData.tree);
     }
   } catch (error) {
-    repositoryAssets.gitwave = repositoryAssets.gitwave || "";
     repositoryAssets.allTracksIcon = repositoryAssets.allTracksIcon || "";
   }
-  if (!repositoryAssets.gitwave || !repositoryAssets.allTracksIcon) await setBrandAssetsFromContents();
-  if (repositoryAssets.gitwave || repositoryAssets.allTracksIcon) writeCache(albums);
+  if (!repositoryAssets.allTracksIcon) await setLibraryIconsFromContents();
+  if (repositoryAssets.allTracksIcon) writeCache(albums);
 }
 
 async function loadLibrary(force = false) {
@@ -1551,7 +1463,7 @@ async function loadLibrary(force = false) {
     }
     albums = result;
     buildAllTracksAlbum();
-    await ensureBrandAssets(fromCache);
+    await ensureLibraryIcons(fromCache);
     applyLibraryAssets();
     renderAlbums();
     setStatus("ready", fromCache ? "Библиотека из кэша" : "Библиотека синхронизирована");
@@ -1691,8 +1603,7 @@ function renderAlbums() {
     } else {
       const cover = album.cover || FALLBACK_COVER;
       const coverFallback = album.coverFallback ? `data-fallback-src="${escapeHTML(album.coverFallback)}"` : "";
-      const logo = album.logo ? `<img class="album-cover-logo" src="${escapeHTML(album.logo)}" data-fallback-src="${escapeHTML(album.logoFallback || "")}" alt="" loading="lazy">` : "";
-      coverContent = `<img class="album-cover" crossorigin="anonymous" src="${escapeHTML(cover)}" ${coverFallback} alt="Обложка ${escapeHTML(album.title)}" loading="lazy" draggable="false"><div class="album-cover-placeholder" hidden></div>${logo}`;
+      coverContent = `<img class="album-cover" crossorigin="anonymous" src="${escapeHTML(cover)}" ${coverFallback} alt="Обложка ${escapeHTML(album.title)}" loading="lazy" draggable="false"><div class="album-cover-placeholder" hidden></div>`;
     }
     return `<article class="album-card${isAll ? " all-tracks-card" : ""}" role="button" tabindex="0" data-album-id="${escapeHTML(album.id)}" style="animation-delay:${Math.min(index * 45, 360)}ms"><div class="album-card-inner"><div class="album-cover-wrap">${coverContent}</div><div class="album-info"><h3 class="album-name">${escapeHTML(album.title)}</h3><span class="album-track-count">${album.tracks.length} TRACK${album.tracks.length === 1 ? "" : "S"}</span></div><div class="album-subline"><span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3"/><path d="M12 3v6"/></svg>${isAll ? "Вся коллекция" : "Альбом"}</span></div></div></article>`;
   }).join("");
@@ -1717,16 +1628,6 @@ function renderAlbums() {
       });
       if (image.complete && image.naturalWidth) applyImagePalette(album, image);
     }
-    const logo = card.querySelector(".album-cover-logo");
-    if (logo) logo.addEventListener("error", () => {
-      const fallbackUrl = logo.dataset.fallbackSrc;
-      if (fallbackUrl && logo.dataset.fallbackUsed !== "1") {
-        logo.dataset.fallbackUsed = "1";
-        logo.src = fallbackUrl;
-      } else {
-        logo.hidden = true;
-      }
-    });
   });
   const allCard = elements.grid.querySelector(`[data-album-id="${ALL_TRACKS_ID}"]`);
   if (allTracksAlbum) {
@@ -1825,7 +1726,6 @@ function openAlbum(album) {
   elements.playlistMeta.textContent = album.isAllTracks ? `${pluralTracks(album.tracks.length)} · ${albums.length} альбомов` : `${pluralTracks(album.tracks.length)} · ${album.folder}`;
   elements.trackCount.textContent = `${album.tracks.length} TRACK${album.tracks.length === 1 ? "" : "S"}`;
   renderPlaylistCover(album);
-  applyOptionalImage(elements.playlistLogo, album.isAllTracks ? "" : album.logo, album.logoFallback);
   const backgroundAlbum = album.isAllTracks ? (viewedActiveIndex >= 0 ? getTrackSourceAlbum(album, album.tracks[viewedActiveIndex]) : null) : album;
   setAmbientBackground(backgroundAlbum ? backgroundAlbum.background || repositoryAssets.background || backgroundAlbum.cover : repositoryAssets.background, backgroundAlbum);
   renderTrackList();
