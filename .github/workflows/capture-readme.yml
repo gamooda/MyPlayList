@@ -91,6 +91,8 @@ jobs:
                 const directories = new Map();
                 return {
                   name,
+                  queryPermission: async () => "granted",
+                  requestPermission: async () => "granted",
                   getDirectoryHandle: async (childName, options = {}) => {
                     if (!directories.has(childName) && options.create) directories.set(childName, makeDirectory(childName, path + "/" + childName));
                     if (!directories.has(childName)) throw new Error("Directory not found: " + childName);
