@@ -1,0 +1,151 @@
+name: Capture GitWave screenshots
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - index.html
+      - README.md
+      - music/**
+      - .github/workflows/capture-readme.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: gitwave-readme-screenshots
+  cancel-in-progress: false
+
+jobs:
+  screenshots:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install capture tools
+        run: |
+          npm install --prefix "$RUNNER_TEMP/gitwave-capture" playwright
+          "$RUNNER_TEMP/gitwave-capture/node_modules/.bin/playwright" install --with-deps chromium
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
+      - name: Capture GitWave screens and all-tracks GIF
+        env:
+          PLAYWRIGHT_PATH: ${{ runner.temp }}/gitwave-capture/node_modules/playwright
+        run: |
+          mkdir -p docs/screenshots /tmp/gitwave-gif-frames
+          cat > capture-readme.cjs <<'EOF'
+          const { chromium } = require(process.env.PLAYWRIGHT_PATH);
+          const fs = require('node:fs');
+          (async () => {
+            const browser = await chromium.launch({ headless: true });
+            const page = await browser.newPage({ viewport: { width: 1440, height: 1000 }, deviceScaleFactor: 1 });
+            const pageErrors = [];
+            page.setDefaultTimeout(60000);
+            page.on('pageerror', error => pageErrors.push(String(error)));
+            page.on('console', message => {
+              if (message.type() === 'error') console.error('PAGE CONSOLE:', message.text());
+            });
+            await page.goto('https://gamooda.github.io/gitwave/', { waitUntil: 'networkidle', timeout: 180000 }).catch(async error => {
+              console.error('Initial navigation did not reach networkidle:', error.message);
+              await page.goto('https://gamooda.github.io/gitwave/', { waitUntil: 'domcontentloaded', timeout: 180000 });
+            });
+            await page.waitForFunction(() => {
+              const grid = document.querySelector('#albumGrid');
+              const status = document.querySelector('#syncStatus');
+              return Boolean(grid && (grid.querySelector('.album-card') || status?.classList.contains('error')));
+            }, { timeout: 240000 }).catch(async () => {
+              const state = await page.evaluate(() => ({
+                title: document.title,
+                url: location.href,
+                status: document.querySelector('#statusText')?.textContent || '',
+                statusClass: document.querySelector('#syncStatus')?.className || '',
+                empty: document.querySelector('#emptyTitle')?.textContent || '',
+                message: document.querySelector('#emptyMessage')?.textContent || '',
+                grid: document.querySelector('#albumGrid')?.innerHTML?.slice(0, 1200) || '',
+                errors: pageErrors
+              }));
+              throw new Error('GitWave library did not finish loading: ' + JSON.stringify(state));
+            });
+            await page.waitForFunction(() => document.querySelector('#albumGrid .album-card'), { timeout: 60000 });
+            await page.waitForTimeout(1800);
+            await page.screenshot({ path: 'docs/screenshots/library.png', fullPage: true });
+            await page.locator('article[data-album-id="__all_tracks__"]').click();
+            await page.locator('#playlistOverlay.open').waitFor({ state: 'visible', timeout: 60000 });
+            await page.locator('#trackList .track-group-heading').first().waitFor({ state: 'visible', timeout: 60000 });
+            await page.waitForTimeout(1000);
+            const list = page.locator('#trackList');
+            const groups = await list.locator('.track-group-heading').count();
+            let frame = 0;
+            const capture = async () => {
+              await page.screenshot({ path: '/tmp/gitwave-gif-frames/frame-' + String(frame++).padStart(4, '0') + '.png' });
+            };
+            await capture();
+            for (let g = 0; g < groups; g++) {
+              const heading = list.locator('.track-group-heading').nth(g);
+              const rows = await heading.evaluate(el => {
+                const result = [];
+                let node = el.nextElementSibling;
+                while (node && !node.classList.contains('track-group-heading')) {
+                  if (node.classList.contains('track-row')) result.push(node);
+                  node = node.nextElementSibling;
+                }
+                return result.length;
+              });
+              if (!rows) continue;
+              await heading.scrollIntoViewIfNeeded();
+              await page.waitForTimeout(250);
+              const firstRow = heading.locator('xpath=following-sibling::div[contains(@class,"track-row")][1]');
+              await firstRow.click();
+              await page.waitForTimeout(850);
+              await capture();
+              const rowLocators = await heading.evaluate(el => {
+                const result = [];
+                let node = el.nextElementSibling;
+                while (node && !node.classList.contains('track-group-heading')) {
+                  if (node.classList.contains('track-row')) result.push(node);
+                  node = node.nextElementSibling;
+                }
+                return result.map((el, index) => ({ index, top: el.offsetTop, height: el.offsetHeight }));
+              });
+              const startTop = heading.evaluate(el => el.offsetTop);
+              const endTop = rowLocators.length ? rowLocators[rowLocators.length - 1].top : startTop;
+              const maxTop = Math.max(0, endTop - list.evaluate(el => el.offsetTop) - list.evaluate(el => el.clientHeight) + 180);
+              const from = await list.evaluate(el => el.scrollTop);
+              const target = Math.max(from, endTop - await list.evaluate(el => el.clientHeight) + 110);
+              const steps = Math.max(4, Math.ceil(Math.abs(target - from) / 125));
+              for (let s = 1; s <= steps; s++) {
+                const position = Math.round(from + (target - from) * s / steps);
+                await list.evaluate((el, value) => { el.scrollTop = value; }, position);
+                await page.waitForTimeout(115);
+                await capture();
+              }
+              await page.waitForTimeout(250);
+            }
+            await list.evaluate(el => { el.scrollTop = el.scrollHeight; });
+            await page.waitForTimeout(2500);
+            await capture();
+            await browser.close();
+          })().catch(error => {
+            console.error(error);
+            process.exit(1);
+          });
+          EOF
+          node capture-readme.cjs
+          rm capture-readme.cjs
+          ffmpeg -y -framerate 4 -i /tmp/gitwave-gif-frames/frame-%04d.png -vf "fps=4,scale=960:-1:flags=lanczos,split[s0][s1];[s0]palettegen=max_colors=128:stats_mode=diff[p];[s1][p]paletteuse=dither=bayer:bayer_scale=3:diff_mode=rectangle" -loop 0 docs/screenshots/all-tracks.gif
+      - name: Commit screenshots and GIF
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git rm -f docs/screenshots/playlist.png || true
+          git add docs/screenshots/library.png docs/screenshots/all-tracks.gif
+          if ! git diff --cached --quiet; then
+            git commit -m "Add GitWave all-tracks animated preview"
+            git push origin main
+          fi
