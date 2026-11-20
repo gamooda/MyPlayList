@@ -134,11 +134,6 @@ body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;ba
 .download-zip-btn:hover:not(:disabled){transform:translateY(-1px);border-color:rgba(var(--active-rgb),.72);background:rgba(var(--active-rgb),.24)}
 .download-zip-btn:disabled{opacity:.55;cursor:wait}
 .download-zip-btn svg{width:15px;height:15px;flex:none;color:rgb(var(--active-rgb))}
-.download-zip-save-btn{width:34px;height:34px;display:grid;place-items:center;flex:none;border:1px solid rgba(63,63,70,.72);border-radius:8px;background:rgba(255,255,255,.035);color:#9b9ba5;cursor:pointer;transition:all .2s}
-.download-zip-save-btn:hover:not(:disabled){border-color:rgba(var(--active-rgb),.55);background:rgba(var(--active-rgb),.12);color:#fff}
-.download-zip-save-btn:disabled{opacity:.38;cursor:wait}
-.download-zip-save-btn[hidden]{display:none}
-.download-zip-save-btn svg{width:15px;height:15px;flex:none}
 .download-progress{padding:11px 21px 12px;border-bottom:1px solid rgba(63,63,70,.45);background:rgba(9,9,11,.2)}
 .download-progress[hidden]{display:none}
 .download-progress-info{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:8px;color:#bfc1c8;font-family:'Golos Text',sans-serif;font-size:10px;font-variant-numeric:tabular-nums}
@@ -350,7 +345,7 @@ body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;ba
 <div class="playlist-overlay" id="playlistOverlay" aria-hidden="true">
 <div class="playlist-scrim" id="playlistScrim"></div><div class="playlist-ambient" id="playlistAmbient"></div>
 <section class="playlist-window" role="dialog" aria-modal="true" aria-label="Плейлист альбома">
-<div class="playlist-topline"><div class="playlist-breadcrumb">GITWAVE <span>/</span> PLAYLIST</div><div class="playlist-topline-actions"><button class="download-zip-btn" id="downloadZipBtn" type="button" title="Скачать через браузер и показать в списке загрузок"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0 4-4m-4 4-4-4"/><path d="M4 16v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></svg><span id="downloadZipLabel">Скачать ZIP</span></button><button class="download-zip-save-btn" id="downloadZipSaveAsBtn" type="button" title="Сохранить ZIP в выбранное место" aria-label="Сохранить ZIP как"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0 4-4m-4 4-4-4"/><path d="M4 16v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/><path d="M8 21h8"/></svg></button><button class="close-playlist" id="closePlaylist" type="button" aria-label="Закрыть плейлист"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m18 6-12 12M6 6l12 12"/></svg></button></div></div>
+<div class="playlist-topline"><div class="playlist-breadcrumb">GITWAVE <span>/</span> PLAYLIST</div><div class="playlist-topline-actions"><button class="download-zip-btn" id="downloadZipBtn" type="button" title="Скачать через браузер и показать в списке загрузок"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0 4-4m-4 4-4-4"/><path d="M4 16v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></svg><span id="downloadZipLabel">Скачать ZIP</span></button><button class="close-playlist" id="closePlaylist" type="button" aria-label="Закрыть плейлист"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m18 6-12 12M6 6l12 12"/></svg></button></div></div>
 <div class="download-progress" id="downloadProgress" hidden><div class="download-progress-info"><span id="downloadProgressText">Подготовка загрузки…</span><span id="downloadProgressStats">0 МБ/с · осталось —</span></div><div class="download-progress-track"><i id="downloadProgressFill"></i></div></div>
 <div class="playlist-body">
 <aside class="playlist-aside"><div class="playlist-cover-shell"><img class="playlist-cover" id="playlistCover" alt="Обложка альбома"><div class="all-cover-mosaic playlist-cover-mosaic" id="playlistCoverMosaic" hidden></div><div class="playlist-cover-placeholder" id="playlistCoverFallback"><svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2"><circle cx="32" cy="32" r="23"/><circle cx="32" cy="32" r="15"/><circle cx="32" cy="32" r="5" fill="currentColor" stroke="none"/></svg></div></div><h2 class="playlist-album-title" id="playlistAlbumTitle">Альбом</h2><p class="playlist-album-meta" id="playlistAlbumMeta">0 треков</p><div class="playlist-actions"><button class="play-all-btn" id="playAllBtn" type="button" aria-label="Слушать"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.5c0-.8.87-1.28 1.54-.85l10.2 6.5a1 1 0 0 1 0 1.7l-10.2 6.5A1 1 0 0 1 8 18.5v-13Z"/></svg><span>Слушать</span></button><button class="playlist-secondary" id="shuffleAlbumBtn" type="button">Перемешать</button></div></aside>
@@ -414,7 +409,6 @@ const elements = {
   ambient: document.getElementById("playlistAmbient"),
   closePlaylist: document.getElementById("closePlaylist"),
   downloadZip: document.getElementById("downloadZipBtn"),
-   downloadZipSaveAs: document.getElementById("downloadZipSaveAsBtn"),
   downloadZipLabel: document.getElementById("downloadZipLabel"),
    downloadProgress: document.getElementById("downloadProgress"),
    downloadProgressText: document.getElementById("downloadProgressText"),
@@ -1514,22 +1508,22 @@ function getSelectedTrackEntries() {
   return entries;
 }
 
-async function downloadAlbumZip(album, saveAs = false) {
+async function downloadAlbumZip(album) {
   if (!album) return;
   const title = album.isAllTracks ? "GitWave - Все треки" : album.folder || album.title;
-  return downloadZipItems(title, album.tracks.map(track => ({ album, track })), saveAs);
+  return downloadZipItems(title, album.tracks.map(track => ({ album, track })));
 }
 
-async function downloadSelectedTracksZip(saveAs = false) {
+async function downloadSelectedTracksZip() {
   const entries = getSelectedTrackEntries();
   if (!entries.length) {
     showToast("Сначала выбери композиции для архива.", "error");
     return;
   }
-  return downloadZipItems("GitWave - Выбранные треки", entries, saveAs);
+  return downloadZipItems("GitWave - Выбранные треки", entries);
 }
 
-async function downloadZipItems(title, items, saveAs = false) {
+async function downloadZipItems(title, items) {
   if (zipDownloadActive) return;
   if (!Array.isArray(items) || !items.length) {
     showToast("В этом разделе нет треков для скачивания.", "error");
@@ -1539,7 +1533,6 @@ async function downloadZipItems(title, items, saveAs = false) {
   const token = ++zipDownloadToken;
   zipDownloadActive = true;
   elements.downloadZip.disabled = true;
-  elements.downloadZipSaveAs.disabled = true;
   elements.downloadSelected.disabled = true;
   let completed = 0;
   let totalBytes = 0;
@@ -1548,28 +1541,16 @@ async function downloadZipItems(title, items, saveAs = false) {
   let writable = null;
   let zipWriter = null;
   let browserDownloadSession = null;
-  const useSaveAs = Boolean(saveAs && typeof window.showSaveFilePicker === "function");
-  elements.downloadZipLabel.textContent = useSaveAs ? "Выбор места…" : "Подготовка…";
+  elements.downloadZipLabel.textContent = "Подготовка…";
   elements.downloadProgress.hidden = false;
   elements.downloadProgressText.textContent = "Подготовка архива · " + items.length + " трек(ов)";
   elements.downloadProgressStats.textContent = "Ожидаемая скорость —";
   elements.downloadProgressFill.style.width = "0%";
   try {
-    let saveHandle = null;
-    if (useSaveAs) {
-      saveHandle = await window.showSaveFilePicker({
-        suggestedName,
-        types: [{ description: "ZIP-архив", accept: { "application/zip": [".zip"] } }],
-        excludeAcceptAllOption: false
-      });
-      writable = await saveHandle.createWritable();
+    browserDownloadSession = createBrowserDownloadSession(suggestedName, "application/zip");
+    if (browserDownloadSession) {
+      writable = browserDownloadSession.writable;
       zipWriter = createStreamingZipWriter(writable);
-    } else {
-      browserDownloadSession = createBrowserDownloadSession(suggestedName, "application/zip");
-      if (browserDownloadSession) {
-        writable = browserDownloadSession.writable;
-        zipWriter = createStreamingZipWriter(writable);
-      }
     }
     startedAt = performance.now();
     elements.downloadZipLabel.textContent = "Загрузка 0/" + items.length;
@@ -1606,9 +1587,7 @@ async function downloadZipItems(title, items, saveAs = false) {
       const result = await zipWriter.finish();
       writable = null;
       elements.downloadProgressFill.style.width = "100%";
-      showToast(useSaveAs
-        ? "ZIP сохранён: " + suggestedName + " (" + formatDownloadBytes(result.size) + ")."
-        : "ZIP передан в загрузки браузера: " + suggestedName + " · " + formatDownloadBytes(result.size), "success");
+      showToast("ZIP передан в загрузки браузера: " + suggestedName + " · " + formatDownloadBytes(result.size), "success");
     } else {
       elements.downloadZipLabel.textContent = "Создание ZIP…";
       elements.downloadProgressText.textContent = "Создаю ZIP-архив…";
@@ -1625,7 +1604,6 @@ async function downloadZipItems(title, items, saveAs = false) {
     if (token === zipDownloadToken) {
       zipDownloadActive = false;
       elements.downloadZip.disabled = !viewedAlbum || !viewedAlbum.tracks.length;
-      elements.downloadZipSaveAs.disabled = !viewedAlbum || !viewedAlbum.tracks.length;
       elements.downloadZipLabel.textContent = "Скачать ZIP";
       updateTrackSelectionUI();
       elements.downloadProgress.hidden = true;
@@ -2461,8 +2439,6 @@ function openAlbum(album) {
   elements.playlistMeta.textContent = album.isAllTracks ? `${pluralTracks(album.tracks.length)} · ${albums.length} альбомов` : `${pluralTracks(album.tracks.length)} · ${album.folder}`;
   elements.trackCount.textContent = `${album.tracks.length} TRACK${album.tracks.length === 1 ? "" : "S"}`;
   elements.downloadZip.disabled = zipDownloadActive || !album.tracks.length;
-  elements.downloadZipSaveAs.hidden = typeof window.showSaveFilePicker !== "function";
-  elements.downloadZipSaveAs.disabled = zipDownloadActive || !album.tracks.length;
   elements.downloadZipLabel.textContent = "Скачать ZIP";
   renderPlaylistCover(album);
   const backgroundAlbum = album.isAllTracks ? (viewedActiveIndex >= 0 ? getTrackSourceAlbum(album, album.tracks[viewedActiveIndex]) : null) : album;
@@ -3305,11 +3281,6 @@ elements.emptyRetry.addEventListener("click", () => loadLibrary(true));
 elements.closePlaylist.addEventListener("click", closeAlbum);
 elements.downloadZip.addEventListener("click", () => {
   if (viewedAlbum) downloadAlbumZip(viewedAlbum, false);
-});
-elements.downloadZipSaveAs.addEventListener("click", () => {
-  if (!viewedAlbum) return;
-  if (selectedTrackKeys.size) downloadSelectedTracksZip(true);
-  else downloadAlbumZip(viewedAlbum, true);
 });
 elements.scrim.addEventListener("click", closeAlbum);
 elements.playAll.addEventListener("click", () => {
