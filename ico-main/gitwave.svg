@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" id="logo" viewBox="0 0 225 64" width="225" height="64" text-rendering="geometricPrecision" shape-rendering="geometricPrecision">
+    <g>
+      <rect width="64" height="64" rx="16" fill="#18181b"/>
+      <rect x="0.75" y="0.75" width="62.5" height="62.5" rx="15.25" fill="none" stroke="#27272a" stroke-width="1.5"/>
+      <path d="M44 21.5C41 18.2 36.7 16 32 16C23.16 16 16 23.16 16 32C16 40.84 23.16 48 32 48C40.1 48 46.8 41.98 47.85 34.15H36.5C35.2 34.15 34.2 30 32.5 30C30.8 30 29.8 35.5 28 35.5C26.2 35.5 25.2 32 23.5 32" fill="none" stroke="#FAFAFA" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+        <animate attributeName="d" dur="4.2s" repeatCount="indefinite" calcMode="spline" keyTimes="0; 0.5; 1" keySplines="0.45 0.05 0.55 0.95; 0.45 0.05 0.55 0.95" values="&#10;            M44 21.5C41 18.2 36.7 16 32 16C23.16 16 16 23.16 16 32C16 40.84 23.16 48 32 48C40.1 48 46.8 41.98 47.85 34.15H36.5C35.2 34.15 34.2 30 32.5 30C30.8 30 29.8 35.5 28 35.5C26.2 35.5 25.2 32 23.5 32;&#10;            M44 21.5C41 18.2 36.7 16 32 16C23.16 16 16 23.16 16 32C16 40.84 23.16 48 32 48C40.1 48 46.8 41.98 47.85 34.15H36.5C35.2 34.15 34.2 35.5 32.5 35.5C30.8 35.5 29.8 30 28 30C26.2 30 25.2 32 23.5 32;&#10;            M44 21.5C41 18.2 36.7 16 32 16C23.16 16 16 23.16 16 32C16 40.84 23.16 48 32 48C40.1 48 46.8 41.98 47.85 34.15H36.5C35.2 34.15 34.2 30 32.5 30C30.8 30 29.8 35.5 28 35.5C26.2 35.5 25.2 32 23.5 32&#10;          "/>
+      </path>
+      <circle cx="44.5" cy="21.5" r="3" fill="#FAFAFA"/>
+    </g>
+
+    <text x="84" y="44" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="34" fill="#FAFAFA" letter-spacing="-0.5">
+      <tspan font-weight="700">git</tspan><tspan dx="3" font-weight="400">wave</tspan>
+    </text>
+  </svg>
