@@ -17,10 +17,21 @@
 ## Предпросмотр
 
 <div align="center">
-  <a href="https://gamooda.github.io/gitwave/">
-    <img src="https://s.wordpress.com/mshots/v1/https%3A%2F%2Fgamooda.github.io%2Fgitwave%2F?w=1600" alt="Скриншот GitWave — музыкальная библиотека" width="100%">
-  </a>
-  <sub>Актуальный снимок опубликованной версии. Нажми на изображение, чтобы открыть плеер.</sub>
+
+### Библиотека
+
+<a href="docs/screenshots/library.png">
+  <img src="docs/screenshots/library.png" alt="GitWave — музыкальная библиотека" width="100%">
+</a>
+
+### Открытый альбом
+
+<a href="docs/screenshots/playlist.png">
+  <img src="docs/screenshots/playlist.png" alt="GitWave — экран альбома и список треков" width="100%">
+</a>
+
+<sub>Скриншоты автоматически снимаются с опубликованной версии GitWave в Chromium.</sub>
+
 </div>
 
 ## О GitWave
