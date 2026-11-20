@@ -1,0 +1,110 @@
+name: Validate GitWave
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - README.md
+      - index.html
+      - assets/**
+      - gitwave-download-sw.js
+      - manifest.webmanifest
+      - music/**
+      - ico-main/**
+      - .github/workflows/validate.yml
+  workflow_dispatch:
+
+permissions:
+  actions: read
+  contents: read
+
+concurrency:
+  group: gitwave-validation
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    env:
+      DEPLOYED_SHA: ${{ github.sha }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+      - name: Wait for GitHub Pages deployment
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          for attempt in $(seq 1 120); do
+            run_info=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs?head_sha=$DEPLOYED_SHA&per_page=100" --jq '.workflow_runs[] | select(.name == "pages build and deployment") | [.id, .status, (.conclusion // "")] | @tsv' | tail -n 1)
+            if [ -n "$run_info" ]; then
+              IFS=$'\t' read -r run_id status conclusion <<< "$run_info"
+              if [ "$status" = "completed" ]; then
+                if [ "$conclusion" = "success" ]; then
+                  exit 0
+                fi
+                echo "Pages deployment failed: $conclusion"
+                exit 1
+              fi
+            fi
+            sleep 5
+          done
+          echo "Timed out waiting for Pages deployment"
+          exit 1
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install browser test tools
+        run: |
+          npm install --no-save playwright
+          npx playwright install --with-deps chromium
+      - name: Validate deployed GitWave
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cat > validate.cjs <<'EOF'
+          const { chromium } = require('playwright');
+          (async () => {
+            const browser = await chromium.launch({ headless: true });
+            const context = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+            const page = await context.newPage();
+            const errors = [];
+            await page.route('https://api.github.com/**', async route => {
+              const headers = {
+                ...route.request().headers(),
+                authorization: 'Bearer ' + process.env.GH_TOKEN,
+                'x-github-api-version': '2022-11-28'
+              };
+              const response = await route.fetch({ headers });
+              await route.fulfill({ response });
+            });
+            page.on('pageerror', error => errors.push(String(error)));
+            await page.goto('https://gamooda.github.io/gitwave/?check=' + process.env.DEPLOYED_SHA, { waitUntil: 'domcontentloaded', timeout: 90000 });
+            await page.waitForFunction(() => {
+              const grid = document.querySelector('#albumGrid');
+              return Boolean(grid && (grid.querySelector('.album-card') || document.querySelector('#syncStatus.error')));
+            }, null, { timeout: 180000 });
+            await page.locator('#albumGrid .album-card').first().waitFor({ state: 'visible', timeout: 45000 });
+            const cards = await page.locator('#albumGrid .album-card').count();
+            if (cards < 3) throw new Error('Expected at least three album cards, found ' + cards);
+            if (await page.locator('#albumSort').count()) throw new Error('Removed album sort control is still present');
+            await page.locator('#albumGrid .album-card:not([data-album-id="__all_tracks__"])').first().click();
+            await page.locator('#playlistOverlay.open').waitFor({ state: 'visible', timeout: 30000 });
+            const firstTrack = page.locator('#trackList .track-row').first();
+            await firstTrack.waitFor({ state: 'visible', timeout: 30000 });
+            await firstTrack.locator('[data-track-play]').click();
+            await page.waitForFunction(() => {
+              const audio = document.querySelector('audio');
+              return Boolean(audio && audio.currentSrc && !audio.paused);
+            }, null, { timeout: 30000 });
+            if (errors.length) throw new Error('Browser errors: ' + errors.join(' | '));
+            console.log('GitWave smoke test passed. Album cards:', cards);
+            await browser.close();
+          })().catch(error => {
+            console.error(error);
+            process.exit(1);
+          });
+          EOF
+          node validate.cjs
+          rm validate.cjs
