@@ -1,4 +1,6 @@
 const DOWNLOAD_PREFIX = new URL("__gitwave_download__/", self.registration.scope).pathname;
+const downloadPorts = new Map();
+const waitingPorts = new Map();
 
 self.addEventListener("install", event => {
   event.waitUntil(self.skipWaiting());
@@ -6,6 +8,27 @@ self.addEventListener("install", event => {
 
 self.addEventListener("activate", event => {
   event.waitUntil(self.clients.claim());
+});
+
+self.addEventListener("message", event => {
+  const message = event.data || {};
+  if (message.type !== "GITWAVE_REGISTER_DOWNLOAD" || !/^[A-Za-z0-9_-]{8,100}$/.test(message.id || "") || !event.ports || !event.ports[0]) return;
+  const record = { port: event.ports[0] };
+  const waiter = waitingPorts.get(message.id);
+  if (waiter) {
+    clearTimeout(waiter.timer);
+    waitingPorts.delete(message.id);
+    waiter.resolve(record.port);
+  } else {
+    const previous = downloadPorts.get(message.id);
+    if (previous) {
+      try {
+        previous.port.close();
+      } catch (error) {
+      }
+    }
+    downloadPorts.set(message.id, record);
+  }
 });
 
 self.addEventListener("fetch", event => {
@@ -16,25 +39,41 @@ self.addEventListener("fetch", event => {
     release = resolve;
   });
   event.waitUntil(lifetime);
-  event.respondWith(createDownloadResponse(event, url, release));
+  event.respondWith(createDownloadResponse(url, release));
 });
 
-async function createDownloadResponse(event, url, release) {
-  const id = url.pathname.slice(DOWNLOAD_PREFIX.length).split("/")[0];
-  let client = event.clientId ? await self.clients.get(event.clientId) : null;
-  if (!client) {
-    const clients = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
-    client = clients.find(item => new URL(item.url).origin === self.location.origin) || null;
+function takeDownloadPort(id) {
+  const record = downloadPorts.get(id);
+  if (record) {
+    downloadPorts.delete(id);
+    return Promise.resolve(record.port);
   }
-  if (!client || !/^[A-Za-z0-9_-]{8,100}$/.test(id)) {
+  return new Promise(resolve => {
+    const timer = setTimeout(() => {
+      waitingPorts.delete(id);
+      resolve(null);
+    }, 10000);
+    waitingPorts.set(id, {
+      timer,
+      resolve: port => resolve(port)
+    });
+  });
+}
+
+async function createDownloadResponse(url, release) {
+  const id = url.pathname.slice(DOWNLOAD_PREFIX.length).split("/")[0];
+  if (!/^[A-Za-z0-9_-]{8,100}$/.test(id)) {
     release();
     return new Response("Download unavailable", { status: 404 });
+  }
+  const port = await takeDownloadPort(id);
+  if (!port) {
+    release();
+    return new Response("Download session unavailable", { status: 503 });
   }
 
   const fileName = url.searchParams.get("filename") || "download.bin";
   const mime = url.searchParams.get("type") || "application/octet-stream";
-  const channel = new MessageChannel();
-  const port = channel.port1;
   let controller = null;
   let pendingPull = null;
   let closed = false;
@@ -146,10 +185,9 @@ async function createDownloadResponse(event, url, release) {
     }
   };
   port.start();
-  client.postMessage({ type: "GITWAVE_DOWNLOAD_STREAM", id }, [channel.port2]);
 
   const fallbackName = fileName.replace(/[\u0000-\u001f\u007f"\\]/g, "_").replace(/[^\x20-\x7E]/g, "_") || "download.bin";
-  const disposition = 'attachment; filename="' + fallbackName + '"; filename*=UTF-8\'\'' + encodeURIComponent(fileName);
+  const disposition = 'attachment; filename="' + fallbackName + '"; filename*=UTF-8\\'\\'' + encodeURIComponent(fileName);
   return new Response(stream, {
     status: 200,
     headers: {
