@@ -291,7 +291,7 @@ jobs:
                 page.locator('#trackList .track-row').first().locator('[data-track-download]').click()
               ]);
               const singleFile = await inspectDownload(singleDownload);
-              if (!/\\.(mp3|ogg|wav)$/i.test(singleFile.fileName) || singleFile.size <= 0) throw new Error('Native individual download validation failed: ' + JSON.stringify(singleFile));
+              if (!/\.(mp3|ogg|wav)$/i.test(singleFile.fileName.replace(/\\/g, "")) || singleFile.size <= 0) throw new Error('Native individual download validation failed: ' + JSON.stringify(singleFile));
               await page.locator('#trackList .track-select-btn[aria-pressed="true"]').click();
               const [albumDownload] = await Promise.all([
                 page.waitForEvent('download', { timeout: 60000 }),
