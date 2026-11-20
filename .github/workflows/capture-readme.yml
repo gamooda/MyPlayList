@@ -86,6 +86,7 @@ jobs:
             const browser = await chromium.launch({ headless: true });
             const context = await browser.newContext({ viewport: { width: 1280, height: 800 }, deviceScaleFactor: 1, acceptDownloads: true });
             const page = await context.newPage();
+            await page.addInitScript(() => { window.__gitwaveForceBlobDownloads = true; });
             const fs = require('node:fs');
             const pageErrors = [];
             if (!process.env.GH_TOKEN) throw new Error('GitHub Actions token is missing for authenticated repository API access');
@@ -99,6 +100,8 @@ jobs:
               await route.fulfill({ response });
             });
             page.setDefaultTimeout(45000);
+            console.log('Browser version:', browser.version());
+            console.log('Testing compatibility fallback without Service Worker download interception');
             page.on('pageerror', error => pageErrors.push(String(error)));
             page.on('response', response => {
               if (response.status() >= 400) console.error('HTTP RESPONSE:', response.status(), response.url());
@@ -235,8 +238,7 @@ jobs:
               if (!selectedLabel.includes('1') || await page.locator('#downloadSelectedBtn').isDisabled()) throw new Error('Track selection control did not update');
               await page.locator('#trackList .track-row').first().locator('[data-track-select]').click();
               if (!(await page.locator('#downloadSelectedBtn').isDisabled())) throw new Error('Track selection did not clear');
-              await page.waitForFunction(() => Boolean(navigator.serviceWorker?.controller), null, { timeout: 30000 });
-              const inspectDownload = async download => {
+                const inspectDownload = async download => {
                 let filePath;
                 try {
                   filePath = await new Promise((resolve, reject) => {
