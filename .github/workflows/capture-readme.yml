@@ -18,7 +18,7 @@ permissions:
 
 concurrency:
   group: gitwave-readme-screenshots
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   screenshots:
