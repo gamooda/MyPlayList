@@ -1952,6 +1952,8 @@ function openAlbum(album) {
   elements.playlistTitle.textContent = album.title;
   elements.playlistMeta.textContent = album.isAllTracks ? `${pluralTracks(album.tracks.length)} · ${albums.length} альбомов` : `${pluralTracks(album.tracks.length)} · ${album.folder}`;
   elements.trackCount.textContent = `${album.tracks.length} TRACK${album.tracks.length === 1 ? "" : "S"}`;
+  elements.downloadZip.disabled = zipDownloadActive || !album.tracks.length;
+  elements.downloadZipLabel.textContent = album.isAllTracks ? "Скачать всё ZIP" : "Скачать ZIP";
   renderPlaylistCover(album);
   const backgroundAlbum = album.isAllTracks ? (viewedActiveIndex >= 0 ? getTrackSourceAlbum(album, album.tracks[viewedActiveIndex]) : null) : album;
   setAmbientBackground(backgroundAlbum ? backgroundAlbum.background || repositoryAssets.background || backgroundAlbum.cover : repositoryAssets.background, backgroundAlbum);
@@ -2781,6 +2783,9 @@ elements.globalTrackResults.addEventListener("click", event => {
 elements.playlistSearch.addEventListener("input", renderTrackList);
 elements.emptyRetry.addEventListener("click", () => loadLibrary(true));
 elements.closePlaylist.addEventListener("click", closeAlbum);
+elements.downloadZip.addEventListener("click", () => {
+  if (viewedAlbum) downloadAlbumZip(viewedAlbum);
+});
 elements.scrim.addEventListener("click", closeAlbum);
 elements.playAll.addEventListener("click", () => {
   if (!viewedAlbum || !viewedAlbum.tracks.length) return;
