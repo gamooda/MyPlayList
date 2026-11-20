@@ -983,7 +983,15 @@ async function writeTrackToFolder(root, album, track) {
   const segments = getInstallTrackPath(album, track);
   const fileName = segments.pop();
   const directory = await getInstallDirectory(root, segments);
-  const fileHandle = await directory.getFileHandle(fileName, { create: true });
+  let fileHandle;
+  let fileExisted = true;
+  try {
+    fileHandle = await directory.getFileHandle(fileName);
+  } catch (error) {
+    if (error.name !== "NotFoundError") throw error;
+    fileExisted = false;
+    fileHandle = await directory.getFileHandle(fileName, { create: true });
+  }
   const sources = [...new Set([track.url, track.fallbackUrl].filter(Boolean))];
   let lastError = null;
   for (const source of sources) {
@@ -1005,7 +1013,7 @@ async function writeTrackToFolder(root, album, track) {
       if (writable) await writable.abort().catch(() => {});
     }
   }
-  await directory.removeEntry(fileName).catch(() => {});
+  if (!fileExisted) await directory.removeEntry(fileName).catch(() => {});
   throw new Error((track.fileName || track.title) + ": " + (lastError ? lastError.message : "источник недоступен"));
 }
 
