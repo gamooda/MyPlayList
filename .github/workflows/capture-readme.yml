@@ -77,6 +77,7 @@ jobs:
       - name: Capture GitWave screens and all-tracks GIF
         env:
           PLAYWRIGHT_PATH: ${{ runner.temp }}/gitwave-capture/node_modules/playwright
+          GH_TOKEN: ${{ github.token }}
         run: |
           mkdir -p docs/screenshots /tmp/gitwave-library-frames /tmp/gitwave-gif-frames
           cat > capture-readme.cjs <<'EOF'
@@ -87,6 +88,16 @@ jobs:
             const page = await context.newPage();
             const fs = require('node:fs');
             const pageErrors = [];
+            if (!process.env.GH_TOKEN) throw new Error('GitHub Actions token is missing for authenticated repository API access');
+            await page.route('https://api.github.com/**', async route => {
+              const headers = {
+                ...route.request().headers(),
+                authorization: 'Bearer ' + process.env.GH_TOKEN,
+                'x-github-api-version': '2022-11-28'
+              };
+              const response = await route.fetch({ headers });
+              await route.fulfill({ response });
+            });
             page.setDefaultTimeout(45000);
             page.on('pageerror', error => pageErrors.push(String(error)));
             page.on('response', response => {
