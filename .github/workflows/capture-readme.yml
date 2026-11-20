@@ -85,48 +85,7 @@ jobs:
             const browser = await chromium.launch({ headless: true });
             const context = await browser.newContext({ viewport: { width: 1280, height: 800 }, deviceScaleFactor: 1, acceptDownloads: true });
             const page = await context.newPage();
-            await page.addInitScript(() => {
-              const records = [];
-              const makeDirectory = (name, path) => {
-                const directories = new Map();
-                const files = new Map();
-                return {
-                  name,
-                  queryPermission: async () => "granted",
-                  requestPermission: async () => "granted",
-                  getDirectoryHandle: async (childName, options = {}) => {
-                    if (!directories.has(childName) && options.create) directories.set(childName, makeDirectory(childName, path + "/" + childName));
-                    if (!directories.has(childName)) throw new Error("Directory not found: " + childName);
-                    return directories.get(childName);
-                  },
-                  getFileHandle: async (fileName, options = {}) => {
-                    if (!files.has(fileName)) {
-                      if (!options.create) {
-                        const error = new Error("File not found: " + fileName);
-                        error.name = "NotFoundError";
-                        throw error;
-                      }
-                      files.set(fileName, true);
-                    }
-                    return {
-                      name: fileName,
-                      createWritable: async () => {
-                        const record = { path: path + "/" + fileName, size: 0 };
-                        return new WritableStream({
-                          write(chunk) { record.size += chunk.byteLength; },
-                          close() { records.push(record); }
-                        });
-                      }
-                    };
-                  },
-                  removeEntry: async fileName => { files.delete(fileName); }
-                };
-              };
-              const root = makeDirectory("Selected", "Selected");
-              const picker = async () => root;
-              Object.defineProperty(window, "showDirectoryPicker", { configurable: true, value: picker });
-              Object.defineProperty(window, "__gitwaveInstallTest", { configurable: true, value: { records, root } });
-            });
+            const fs = require('node:fs');
             const pageErrors = [];
             page.setDefaultTimeout(45000);
             page.on('pageerror', error => pageErrors.push(String(error)));
@@ -241,39 +200,34 @@ jobs:
             await list.evaluate(el => { el.scrollTop = el.scrollHeight; });
             await capture(15);
             console.log('Captured all-tracks GIF frames:', frame, 'categories:', groups);
-            await page.goto(captureUrl + '&install-test=1', { waitUntil: 'domcontentloaded', timeout: 90000 });
+            await page.goto(captureUrl + '&zip-test=1', { waitUntil: 'domcontentloaded', timeout: 90000 });
             await waitForLibrary();
             const smallestAlbum = await page.locator('#albumGrid .album-card:not([data-album-id="__all_tracks__"])').evaluateAll(cards => {
               return cards.map((card, index) => ({
                 index,
-                id: card.dataset.albumId,
                 count: Number.parseInt(card.querySelector('.album-track-count')?.textContent || '0', 10)
               })).filter(item => item.count > 0).sort((a, b) => a.count - b.count)[0];
             });
             if (smallestAlbum) {
               await page.locator('#albumGrid .album-card:not([data-album-id="__all_tracks__"])').nth(smallestAlbum.index).click();
               await page.locator('#playlistOverlay.open').waitFor({ state: 'visible', timeout: 30000 });
-              const expectedCount = await page.locator('#trackList .track-row').count();
-              if (expectedCount !== smallestAlbum.count) throw new Error('Install test track count does not match album card');
-              await page.locator('#installFolderBtn').click();
-              await page.waitForFunction(count => {
-                const records = window.__gitwaveInstallTest?.records || [];
-                return records.length >= count;
-              }, expectedCount, { timeout: 180000 });
-              const saved = await page.evaluate(() => window.__gitwaveInstallTest.records.map(record => ({ path: record.path, size: record.size })));
-              if (saved.length !== expectedCount || saved.some(record => record.size <= 0)) throw new Error('Folder installation test did not save all audio files');
-              if (saved.some(record => !record.path.startsWith('Selected/'))) throw new Error('Installed audio files were not written into the chosen folder');
-              const albumFolder = smallestAlbum.id.split('/').pop().replace(/[<>:"\/\\|?*\u0000-\u001f]/g, '_').replace(/[. ]+$/g, '').trim();
-              if (saved.some(record => !record.path.startsWith('Selected/' + albumFolder + '/'))) throw new Error('Selected album was not placed inside its own folder');
-              console.log('Verified direct folder installation:', saved.length, 'audio file(s),', saved.reduce((sum, record) => sum + record.size, 0), 'bytes');
+              const downloadPromise = page.waitForEvent('download', { timeout: 180000 });
+              await page.locator('#downloadZipBtn').click();
+              const download = await downloadPromise;
+              const zipPath = await download.path();
+              if (!zipPath) throw new Error('ZIP download has no file path');
+              const archive = fs.readFileSync(zipPath);
+              if (archive.length < 22 || archive.readUInt32LE(0) !== 0x04034b50) throw new Error('Downloaded archive has an invalid ZIP header');
+              let endOffset = -1;
+              for (let index = archive.length - 22; index >= Math.max(0, archive.length - 65558); index--) {
+                if (archive.readUInt32LE(index) === 0x06054b50) {
+                  endOffset = index;
+                  break;
+                }
+              }
+              if (endOffset < 0 || archive.readUInt16LE(endOffset + 10) !== smallestAlbum.count) throw new Error('ZIP archive entry count does not match the selected album');
+              console.log('Verified ZIP archive:', download.suggestedFilename(), archive.length, 'bytes,', smallestAlbum.count, 'track(s)');
             }
-            const allTracksPath = await page.evaluate(() => getInstallTrackPath({ isAllTracks: true }, {
-              path: 'music/Undertale OST — Toby Fox/01 - Test.mp3',
-              fileName: '01 - Test.mp3',
-              albumTitle: 'Undertale OST'
-            }).join('/'));
-            if (allTracksPath !== 'Undertale OST — Toby Fox/01 - Test.mp3') throw new Error('All-tracks installation does not preserve album folders: ' + allTracksPath);
-            console.log('Verified all-tracks folder structure:', allTracksPath);
             await browser.close();
           })().catch(error => {
             console.error(error);
