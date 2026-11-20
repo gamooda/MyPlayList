@@ -754,7 +754,7 @@ function applyBrandLogo(url, fallbackUrl = "") {
   image.src = url;
 }
 
-
+function applyAlbumTheme(album) {
   const palette = album && validPalette(album.palette) ? album.palette : DEFAULT_PALETTE;
   const colors = paletteCss(palette);
   document.documentElement.style.setProperty("--active-rgb", colors.main);
