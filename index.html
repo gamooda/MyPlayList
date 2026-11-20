@@ -1316,7 +1316,7 @@ async function downloadZipItems(title, items) {
   let completed = 0;
   let totalBytes = 0;
   const expectedBytes = items.reduce((sum, item) => sum + Math.max(0, Number(item.track.size) || 0), 0);
-  const startedAt = performance.now();
+  let startedAt = 0;
   let writable = null;
   let zipWriter = null;
   elements.downloadZipLabel.textContent = "Выбор места…";
@@ -1337,6 +1337,7 @@ async function downloadZipItems(title, items) {
       writable = await saveHandle.createWritable();
       zipWriter = createStreamingZipWriter(writable);
     }
+    startedAt = performance.now();
     elements.downloadZipLabel.textContent = "Загрузка 0/" + items.length;
     const fallbackEntries = saveHandle ? null : new Array(items.length);
     const failures = [];
@@ -2319,7 +2320,7 @@ function renderTrackList() {
     if (!groupMap.has(key)) groupMap.set(key, { key, title: item.track.albumTitle || "Без категории", items: [] });
     groupMap.get(key).items.push(item);
   });
-  elements.trackList.innerHTML = groups.concat(Array.from(groupMap.values())).map(group => {
+  elements.trackList.innerHTML = Array.from(groupMap.values()).map(group => {
     const heading = '<div class="track-group-heading"><span class="track-group-marker"></span><span class="track-group-title">' + escapeHTML(group.title) + '</span><span class="track-group-count">' + group.items.length + ' TRACK' + (group.items.length === 1 ? "" : "S") + '</span></div>';
     return heading + group.items.map(({track,index}, groupIndex) => renderRow(track,index,groupIndex)).join("");
   }).join("");
