@@ -103,6 +103,7 @@ jobs:
             page.on('response', response => {
               if (response.status() >= 400) console.error('HTTP RESPONSE:', response.status(), response.url());
             });
+            page.on('requestfailed', request => console.error('REQUEST FAILED:', request.url(), request.failure()?.errorText || 'unknown'));
             page.on('console', message => {
               if (message.type() === 'error') console.error('PAGE CONSOLE:', message.text());
             });
@@ -250,7 +251,14 @@ jobs:
                   });
                 } catch (error) {
                   const failure = await download.failure().catch(() => 'Download failure reason unavailable');
-                  throw new Error('Browser download failed: ' + download.suggestedFilename() + '; reason: ' + failure + '; ' + error.message);
+                  const state = await page.evaluate(() => ({
+                    toasts: [...document.querySelectorAll('#toastContainer .toast')].map(node => node.innerText),
+                    progressText: document.querySelector('#downloadProgressText')?.textContent || '',
+                    buttonLabel: document.querySelector('#downloadZipLabel')?.textContent || '',
+                    serviceWorkerController: Boolean(navigator.serviceWorker?.controller),
+                    serviceWorkerUrl: navigator.serviceWorker?.controller?.scriptURL || ''
+                  }));
+                  throw new Error('Browser download failed: ' + download.suggestedFilename() + '; reason: ' + failure + '; ' + error.message + '; page state: ' + JSON.stringify(state));
                 }
                 if (!filePath) throw new Error('Browser download has no temporary file: ' + download.suggestedFilename());
                 const bytes = fs.readFileSync(filePath);
