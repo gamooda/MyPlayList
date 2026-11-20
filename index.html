@@ -958,6 +958,177 @@ function showToast(message, type = "info") {
   }, 3100);
 }
 
+const ZIP_CRC_TABLE = (() => {
+  const table = new Uint32Array(256);
+  for (let n = 0; n < 256; n++) {
+    let value = n;
+    for (let bit = 0; bit < 8; bit++) value = value & 1 ? 0xedb88320 ^ (value >>> 1) : value >>> 1;
+    table[n] = value >>> 0;
+  }
+  return table;
+})();
+
+function zipCrc32(bytes) {
+  let crc = 0xffffffff;
+  for (let i = 0; i < bytes.length; i++) crc = ZIP_CRC_TABLE[(crc ^ bytes[i]) & 255] ^ (crc >>> 8);
+  return (crc ^ 0xffffffff) >>> 0;
+}
+
+function safeZipSegment(value) {
+  let result = String(value || "track").replace(/[<>:"\/\\|?*\u0000-\u001f]/g, "_").replace(/[. ]+$/g, "").trim();
+  if (!result || result === "." || result === "..") result = "track";
+  return result;
+}
+
+function zipTrackName(album, track) {
+  const fileName = safeZipSegment(track.fileName || track.title || "track");
+  if (!album.isAllTracks) return safeZipSegment(album.folder || album.title) + "/" + fileName;
+  const parts = String(track.path || "").split("/").filter(Boolean);
+  const musicIndex = parts.findIndex(part => part.toLowerCase() === MUSIC_DIR.toLowerCase());
+  if (musicIndex >= 0 && parts.length > musicIndex + 1) return parts.slice(musicIndex + 1).map(safeZipSegment).join("/");
+  return safeZipSegment(track.albumTitle || "Album") + "/" + fileName;
+}
+
+function buildZipArchive(entries) {
+  if (!entries.length || entries.length > 65535) throw new Error("Неподдерживаемое количество файлов для ZIP-архива.");
+  const encoder = new TextEncoder();
+  const localParts = [];
+  const centralParts = [];
+  const now = new Date();
+  const dosTime = (now.getHours() << 11) | (now.getMinutes() << 5) | Math.floor(now.getSeconds() / 2);
+  const dosDate = ((Math.max(1980, now.getFullYear()) - 1980) << 9) | ((now.getMonth() + 1) << 5) | now.getDate();
+  let offset = 0;
+  for (const entry of entries) {
+    const name = encoder.encode(entry.name);
+    const bytes = entry.bytes;
+    if (name.length > 65535 || bytes.length > 0xffffffff || offset > 0xffffffff) throw new Error("ZIP-архив слишком большой.");
+    const crc = zipCrc32(bytes);
+    const local = new Uint8Array(30 + name.length);
+    const localView = new DataView(local.buffer);
+    localView.setUint32(0, 0x04034b50, true);
+    localView.setUint16(4, 20, true);
+    localView.setUint16(6, 0x0800, true);
+    localView.setUint16(8, 0, true);
+    localView.setUint16(10, dosTime, true);
+    localView.setUint16(12, dosDate, true);
+    localView.setUint32(14, crc, true);
+    localView.setUint32(18, bytes.length, true);
+    localView.setUint32(22, bytes.length, true);
+    localView.setUint16(26, name.length, true);
+    localView.setUint16(28, 0, true);
+    local.set(name, 30);
+    localParts.push(local, bytes);
+    const central = new Uint8Array(46 + name.length);
+    const centralView = new DataView(central.buffer);
+    centralView.setUint32(0, 0x02014b50, true);
+    centralView.setUint16(4, 0x0314, true);
+    centralView.setUint16(6, 20, true);
+    centralView.setUint16(8, 0x0800, true);
+    centralView.setUint16(10, 0, true);
+    centralView.setUint16(12, dosTime, true);
+    centralView.setUint16(14, dosDate, true);
+    centralView.setUint32(16, crc, true);
+    centralView.setUint32(20, bytes.length, true);
+    centralView.setUint32(24, bytes.length, true);
+    centralView.setUint16(28, name.length, true);
+    centralView.setUint16(30, 0, true);
+    centralView.setUint16(32, 0, true);
+    centralView.setUint16(34, 0, true);
+    centralView.setUint16(36, 0, true);
+    centralView.setUint32(38, 0, true);
+    centralView.setUint32(42, offset, true);
+    central.set(name, 46);
+    centralParts.push(central);
+    offset += local.length + bytes.length;
+    if (offset > 0xffffffff) throw new Error("ZIP-архив превышает ограничение формата.");
+  }
+  const centralSize = centralParts.reduce((sum, part) => sum + part.length, 0);
+  if (centralSize > 0xffffffff) throw new Error("ZIP-архив превышает ограничение формата.");
+  const end = new Uint8Array(22);
+  const endView = new DataView(end.buffer);
+  endView.setUint32(0, 0x06054b50, true);
+  endView.setUint16(4, 0, true);
+  endView.setUint16(6, 0, true);
+  endView.setUint16(8, entries.length, true);
+  endView.setUint16(10, entries.length, true);
+  endView.setUint32(12, centralSize, true);
+  endView.setUint32(16, offset, true);
+  endView.setUint16(20, 0, true);
+  return new Blob([...localParts, ...centralParts, end], { type: "application/zip" });
+}
+
+async function fetchZipTrack(track) {
+  const sources = [...new Set([track.url, track.fallbackUrl].filter(Boolean))];
+  let lastError = null;
+  for (const source of sources) {
+    try {
+      const response = await fetch(source, { mode: "cors", credentials: "omit", cache: "force-cache", signal: AbortSignal.timeout(90000) });
+      if (!response.ok) throw new Error("HTTP " + response.status);
+      const bytes = new Uint8Array(await response.arrayBuffer());
+      if (!bytes.length) throw new Error("пустой файл");
+      return bytes;
+    } catch (error) {
+      lastError = error;
+    }
+  }
+  throw new Error((track.fileName || track.title) + ": " + (lastError ? lastError.message : "источник недоступен"));
+}
+
+async function downloadAlbumZip(album) {
+  if (zipDownloadActive) return;
+  if (!album || !Array.isArray(album.tracks) || !album.tracks.length) {
+    showToast("В этом разделе нет треков для скачивания.", "error");
+    return;
+  }
+  const token = ++zipDownloadToken;
+  zipDownloadActive = true;
+  elements.downloadZip.disabled = true;
+  let completed = 0;
+  elements.downloadZipLabel.textContent = "Загрузка 0/" + album.tracks.length;
+  try {
+    const entries = new Array(album.tracks.length);
+    const failures = [];
+    let cursor = 0;
+    const worker = async () => {
+      while (true) {
+        const index = cursor++;
+        if (index >= album.tracks.length) return;
+        const track = album.tracks[index];
+        try {
+          const bytes = await fetchZipTrack(track);
+          entries[index] = { name: zipTrackName(album, track), bytes };
+        } catch (error) {
+          failures.push(error);
+        }
+        completed++;
+        if (token === zipDownloadToken) elements.downloadZipLabel.textContent = "Загрузка " + completed + "/" + album.tracks.length;
+      }
+    };
+    await Promise.all(Array.from({ length: Math.min(3, album.tracks.length) }, () => worker()));
+    if (failures.length) throw new Error("Не удалось скачать " + failures.length + " трек(ов): " + failures[0].message);
+    elements.downloadZipLabel.textContent = "Создание ZIP…";
+    const archive = buildZipArchive(entries);
+    const url = URL.createObjectURL(archive);
+    const link = document.createElement("a");
+    const baseName = safeZipSegment(album.isAllTracks ? "GitWave - Все треки" : album.folder || album.title);
+    link.href = url;
+    link.download = baseName + ".zip";
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
+    showToast("ZIP-архив готов: " + album.tracks.length + " трек(ов).", "success");
+  } catch (error) {
+    showToast(error.message || "Не удалось создать ZIP-архив.", "error");
+  } finally {
+    if (token === zipDownloadToken) {
+      zipDownloadActive = false;
+      elements.downloadZip.disabled = !viewedAlbum || !viewedAlbum.tracks.length;
+      elements.downloadZipLabel.textContent = viewedAlbum && viewedAlbum.isAllTracks ? "Скачать всё ZIP" : "Скачать ZIP";
+    }
+  }
+}
+
 function getCacheKey() {
   return `${CACHE_PREFIX}:${repository.owner.toLowerCase()}:${repository.repo.toLowerCase()}`;
 }
