@@ -115,7 +115,7 @@ jobs:
                 const status = document.querySelector('#syncStatus');
                 return Boolean(grid && (grid.querySelector('.album-card') || status?.classList.contains('error')));
               }, null, { timeout: 180000 }).catch(async () => {
-                const state = await page.evaluate(() => ({
+                const state = await page.evaluate(errors => ({
                   title: document.title,
                   url: location.href,
                   status: document.querySelector('#statusText')?.textContent || '',
@@ -123,8 +123,8 @@ jobs:
                   empty: document.querySelector('#emptyTitle')?.textContent || '',
                   message: document.querySelector('#emptyMessage')?.textContent || '',
                   grid: document.querySelector('#albumGrid')?.innerHTML?.slice(0, 1200) || '',
-                  errors: pageErrors
-                }));
+                  errors
+                }), pageErrors);
                 throw new Error('GitWave library did not finish loading: ' + JSON.stringify(state));
               });
               await page.waitForSelector('#albumGrid .album-card', { state: 'visible', timeout: 45000 });
@@ -268,13 +268,13 @@ jobs:
               await page.locator('#downloadZipBtn').click();
               await page.waitForFunction(() => Boolean(window.__gitwaveSaveAsTest?.options), null, { timeout: 10000 });
               await page.waitForFunction(() => window.__gitwaveSaveAsTest?.completed && window.__gitwaveSaveAsTest?.bytes?.length > 0, null, { timeout: 180000 }).catch(async error => {
-                const state = await page.evaluate(() => ({
+                const state = await page.evaluate(errors => ({
                   options: window.__gitwaveSaveAsTest?.options,
                   completed: window.__gitwaveSaveAsTest?.completed,
                   bytes: window.__gitwaveSaveAsTest?.bytes?.length || 0,
                   label: document.querySelector('#downloadZipLabel')?.textContent || '',
-                  errors: pageErrors
-                }));
+                  errors
+                }), pageErrors);
                 throw new Error('ZIP Save As test did not finish: ' + JSON.stringify(state) + ' ' + error.message);
               });
               const saved = await page.evaluate(() => {
