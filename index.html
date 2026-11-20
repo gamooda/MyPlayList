@@ -452,24 +452,9 @@ elements.audio.crossOrigin = "anonymous";
 const browserDownloadSessions = new Map();
 let browserDownloadServicePromise = null;
 
-function handleBrowserDownloadServiceMessage(event) {
-  const message = event.data || {};
-  if (message.type !== "GITWAVE_DOWNLOAD_STREAM" || !message.id || !event.ports || !event.ports[0]) return;
-  const session = browserDownloadSessions.get(message.id);
-  if (session) session.attach(event.ports[0]);
-  else {
-    try {
-      event.ports[0].postMessage({ type: "ERROR", message: "Download session not found" });
-      event.ports[0].close();
-    } catch (error) {
-    }
-  }
-}
-
 function initializeBrowserDownloadService() {
   if (!("serviceWorker" in navigator) || !window.isSecureContext) return Promise.resolve(false);
   if (browserDownloadServicePromise) return browserDownloadServicePromise;
-  navigator.serviceWorker.addEventListener("message", handleBrowserDownloadServiceMessage);
   browserDownloadServicePromise = navigator.serviceWorker.register(new URL("./gitwave-download-sw.js", location.href).href, {
     scope: new URL("./", location.href).pathname,
     updateViaCache: "none"
@@ -658,6 +643,14 @@ function createBrowserDownloadSession(fileName, mime) {
 
   browserDownloadSessions.set(id, session);
   readyTimer = setTimeout(() => fail(new Error("Браузер не подготовил поток загрузки.")), 15000);
+  const channel = new MessageChannel();
+  session.attach(channel.port1);
+  try {
+    navigator.serviceWorker.controller.postMessage({ type: "GITWAVE_REGISTER_DOWNLOAD", id }, [channel.port2]);
+  } catch (error) {
+    fail(error, false);
+    return session;
+  }
   const url = new URL("./__gitwave_download__/" + id, location.href);
   url.searchParams.set("filename", fileName);
   url.searchParams.set("type", mime);
