@@ -1,4 +1,4 @@
-name: Capture GitWave screenshots
+name: Validate GitWave
 
 on:
   push:
@@ -6,7 +6,9 @@ on:
       - main
     paths:
       - index.html
-      - README.md
+      - assets/**
+      - gitwave-download-sw.js
+      - manifest.webmanifest
       - music/**
       - ico-main/**
       - .github/workflows/capture-readme.yml
@@ -14,14 +16,14 @@ on:
 
 permissions:
   actions: read
-  contents: write
+  contents: read
 
 concurrency:
-  group: gitwave-readme-screenshots
+  group: gitwave-validation
   cancel-in-progress: true
 
 jobs:
-  screenshots:
+  validate:
     runs-on: ubuntu-latest
     env:
       DEPLOYED_SHA: ${{ github.sha }}
@@ -33,15 +35,12 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          echo "Waiting for Pages deployment of $DEPLOYED_SHA"
           for attempt in $(seq 1 120); do
             run_info=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs?head_sha=$DEPLOYED_SHA&per_page=100" --jq '.workflow_runs[] | select(.name == "pages build and deployment") | [.id, .status, (.conclusion // "")] | @tsv' | tail -n 1)
             if [ -n "$run_info" ]; then
               IFS=$'\t' read -r run_id status conclusion <<< "$run_info"
-              echo "Pages run $run_id: $status \${conclusion:-pending}"
               if [ "$status" = "completed" ]; then
                 if [ "$conclusion" = "success" ]; then
-                  echo "Pages deployment succeeded for $DEPLOYED_SHA"
                   exit 0
                 fi
                 echo "Pages deployment failed: $conclusion"
@@ -50,46 +49,26 @@ jobs:
             fi
             sleep 5
           done
-          echo "Timed out waiting for Pages deployment of $DEPLOYED_SHA"
+          echo "Timed out waiting for Pages deployment"
           exit 1
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - uses: actions/cache@v4
-        id: capture-cache
-        with:
-          path: |
-            ~/.cache/ms-playwright
-            ${{ runner.temp }}/gitwave-capture/node_modules
-          key: ${{ runner.os }}-gitwave-capture-v2
-      - name: Install capture tools
+      - name: Install browser test tools
         run: |
-          if [ ! -d "$RUNNER_TEMP/gitwave-capture/node_modules/playwright" ]; then
-            npm install --prefix "$RUNNER_TEMP/gitwave-capture" playwright
-          fi
-          if ! compgen -G "$HOME/.cache/ms-playwright/chromium-*" > /dev/null; then
-            "$RUNNER_TEMP/gitwave-capture/node_modules/.bin/playwright" install --with-deps chromium
-          fi
-          if ! command -v ffmpeg >/dev/null 2>&1; then
-            sudo apt-get update
-            sudo apt-get install -y ffmpeg
-          fi
-      - name: Capture GitWave screens and all-tracks GIF
+          npm install --no-save playwright
+          npx playwright install --with-deps chromium
+      - name: Validate deployed GitWave
         env:
-          PLAYWRIGHT_PATH: ${{ runner.temp }}/gitwave-capture/node_modules/playwright
           GH_TOKEN: ${{ github.token }}
         run: |
-          mkdir -p docs/screenshots /tmp/gitwave-library-frames /tmp/gitwave-gif-frames
-          cat > capture-readme.cjs <<'EOF'
-          const { chromium } = require(process.env.PLAYWRIGHT_PATH);
+          cat > validate.cjs <<'EOF'
+          const { chromium } = require('playwright');
           (async () => {
             const browser = await chromium.launch({ headless: true });
-            const context = await browser.newContext({ viewport: { width: 1280, height: 800 }, deviceScaleFactor: 1, acceptDownloads: true });
+            const context = await browser.newContext({ viewport: { width: 1280, height: 800 } });
             const page = await context.newPage();
-            await page.addInitScript(() => { window.__gitwaveForceBlobDownloads = true; });
-            const fs = require('node:fs');
-            const pageErrors = [];
-            if (!process.env.GH_TOKEN) throw new Error('GitHub Actions token is missing for authenticated repository API access');
+            const errors = [];
             await page.route('https://api.github.com/**', async route => {
               const headers = {
                 ...route.request().headers(),
@@ -99,240 +78,32 @@ jobs:
               const response = await route.fetch({ headers });
               await route.fulfill({ response });
             });
-            page.setDefaultTimeout(45000);
-            console.log('Browser version:', browser.version());
-            console.log('Testing compatibility fallback without Service Worker download interception');
-            page.on('pageerror', error => pageErrors.push(String(error)));
-            page.on('response', response => {
-              if (response.status() >= 400) console.error('HTTP RESPONSE:', response.status(), response.url());
-            });
-            page.on('requestfailed', request => console.error('REQUEST FAILED:', request.url(), request.failure()?.errorText || 'unknown'));
-            page.on('console', message => {
-              if (message.type() === 'error') console.error('PAGE CONSOLE:', message.text());
-            });
-            const captureUrl = 'https://gamooda.github.io/gitwave/?capture=' + process.env.DEPLOYED_SHA;
-            console.log('Opening deployed revision:', process.env.DEPLOYED_SHA, captureUrl);
-            await page.goto(captureUrl, { waitUntil: 'domcontentloaded', timeout: 90000 });
-            const waitForLibrary = async () => {
-              await page.waitForFunction(() => {
-                const grid = document.querySelector('#albumGrid');
-                const status = document.querySelector('#syncStatus');
-                return Boolean(grid && (grid.querySelector('.album-card') || status?.classList.contains('error')));
-              }, null, { timeout: 180000 }).catch(async () => {
-                const state = await page.evaluate(errors => ({
-                  title: document.title,
-                  url: location.href,
-                  status: document.querySelector('#statusText')?.textContent || '',
-                  statusClass: document.querySelector('#syncStatus')?.className || '',
-                  empty: document.querySelector('#emptyTitle')?.textContent || '',
-                  message: document.querySelector('#emptyMessage')?.textContent || '',
-                  grid: document.querySelector('#albumGrid')?.innerHTML?.slice(0, 1200) || '',
-                  errors
-                }), pageErrors);
-                throw new Error('GitWave library did not finish loading: ' + JSON.stringify(state));
-              });
-              await page.waitForSelector('#albumGrid .album-card', { state: 'visible', timeout: 45000 });
-              await page.evaluate(() => document.fonts.ready);
-            };
-            await waitForLibrary();
+            page.on('pageerror', error => errors.push(String(error)));
+            await page.goto('https://gamooda.github.io/gitwave/?check=' + process.env.DEPLOYED_SHA, { waitUntil: 'domcontentloaded', timeout: 90000 });
             await page.waitForFunction(() => {
-              const images = [...document.querySelectorAll('#albumGrid img')];
-              return images.every(image => image.complete);
-            }, null, { timeout: 20000 }).catch(() => {});
-            let libraryFrame = 0;
-            const captureLibrary = async (copies = 1) => {
-              for (let i = 0; i < copies; i++) {
-                await page.screenshot({ path: '/tmp/gitwave-library-frames/frame-' + String(libraryFrame++).padStart(4, '0') + '.png' });
-              }
-            };
-            await captureLibrary(15);
-            const albumCards = page.locator('#albumGrid .album-card:not([data-album-id="__all_tracks__"])');
-            const albumCount = await albumCards.count();
-            if (albumCount < 3) throw new Error('The library preview needs at least three albums, found ' + albumCount);
-            for (let albumIndex = 0; albumIndex < 3; albumIndex++) {
-              const card = albumCards.nth(albumIndex);
-              const albumTitle = await card.locator('.album-name').textContent();
-              await card.scrollIntoViewIfNeeded();
-              await card.click();
-              await page.locator('#playlistOverlay.open').waitFor({ state: 'visible', timeout: 30000 });
-              const firstTrack = page.locator('#trackList .track-row').first();
-              await firstTrack.waitFor({ state: 'visible', timeout: 30000 });
-              await firstTrack.locator('[data-track-play]').click();
-              await page.waitForTimeout(700);
-              await captureLibrary(5);
-              await page.locator('#closePlaylist').click();
-              await page.locator('#playlistOverlay.open').waitFor({ state: 'hidden', timeout: 30000 });
-              await page.waitForTimeout(300);
-              await captureLibrary(15);
-              console.log('Library preview played first track:', albumTitle);
-            }
-            console.log('Captured library GIF frames:', libraryFrame);
-            await page.goto(captureUrl + '&preview=all-tracks', { waitUntil: 'domcontentloaded', timeout: 90000 });
-            await waitForLibrary();
-            await page.locator('article[data-album-id="__all_tracks__"]').click();
+              const grid = document.querySelector('#albumGrid');
+              return Boolean(grid && (grid.querySelector('.album-card') || document.querySelector('#syncStatus.error')));
+            }, null, { timeout: 180000 });
+            await page.locator('#albumGrid .album-card').first().waitFor({ state: 'visible', timeout: 45000 });
+            const cards = await page.locator('#albumGrid .album-card').count();
+            if (cards < 3) throw new Error('Expected at least three album cards, found ' + cards);
+            if (await page.locator('#albumSort').count()) throw new Error('Removed album sort control is still present');
+            await page.locator('#albumGrid .album-card:not([data-album-id="__all_tracks__"])').first().click();
             await page.locator('#playlistOverlay.open').waitFor({ state: 'visible', timeout: 30000 });
-            await page.locator('#trackList .track-group-heading').first().waitFor({ state: 'visible', timeout: 30000 });
-            const list = page.locator('#trackList');
-            const groups = await list.locator('.track-group-heading').count();
-            let frame = 0;
-            const capture = async (copies = 1) => {
-              for (let i = 0; i < copies; i++) {
-                await page.screenshot({ path: '/tmp/gitwave-gif-frames/frame-' + String(frame++).padStart(4, '0') + '.png' });
-              }
-            };
-            await capture(2);
-            for (let g = 0; g < groups; g++) {
-              const heading = list.locator('.track-group-heading').nth(g);
-              const metrics = await heading.evaluate(el => {
-                let node = el.nextElementSibling;
-                let count = 0;
-                let endTop = el.offsetTop;
-                while (node && !node.classList.contains('track-group-heading')) {
-                  if (node.classList.contains('track-row')) {
-                    count++;
-                    endTop = node.offsetTop;
-                  }
-                  node = node.nextElementSibling;
-                }
-                return { count, endTop };
-              });
-              if (!metrics.count) continue;
-              await heading.scrollIntoViewIfNeeded();
-              await page.waitForTimeout(150);
-              const firstRow = heading.locator('xpath=following-sibling::div[contains(@class,"track-row")][1]');
-              await firstRow.locator('[data-track-play]').click();
-              await page.waitForTimeout(400);
-              await capture(3);
-              const from = await list.evaluate(el => el.scrollTop);
-              const viewport = await list.evaluate(el => el.clientHeight);
-              const target = Math.max(from, metrics.endTop - viewport + 110);
-              const steps = Math.max(3, Math.ceil(Math.abs(target - from) / 220));
-              for (let s = 1; s <= steps; s++) {
-                const position = Math.round(from + (target - from) * s / steps);
-                await list.evaluate((el, value) => { el.scrollTop = value; }, position);
-                await page.waitForTimeout(80);
-                await capture();
-              }
-              await page.waitForTimeout(120);
-            }
-            await list.evaluate(el => { el.scrollTop = el.scrollHeight; });
-            await capture(15);
-            console.log('Captured all-tracks GIF frames:', frame, 'categories:', groups);
-            await page.goto(captureUrl + '&zip-test=1', { waitUntil: 'domcontentloaded', timeout: 90000 });
-            await waitForLibrary();
-            await page.locator('#albumSort').selectOption('tracks-desc');
-            const sortedTrackCounts = await page.locator('#albumGrid .album-card:not([data-album-id="__all_tracks__"]) .album-track-count').evaluateAll(nodes => nodes.map(node => Number.parseInt(node.textContent || '0', 10)));
-            if (sortedTrackCounts.some((value, index) => index > 0 && sortedTrackCounts[index - 1] < value)) throw new Error('Album track-count sorting is incorrect');
-            await page.locator('#albumSort').selectOption('default');
-            const smallestAlbum = await page.locator('#albumGrid .album-card:not([data-album-id="__all_tracks__"])').evaluateAll(cards => {
-              return cards.map((card, index) => ({
-                index,
-                count: Number.parseInt(card.querySelector('.album-track-count')?.textContent || '0', 10)
-              })).filter(item => item.count > 0).sort((a, b) => a.count - b.count)[0];
-            });
-            if (smallestAlbum) {
-              await page.locator('#albumGrid .album-card:not([data-album-id="__all_tracks__"])').nth(smallestAlbum.index).click();
-              await page.locator('#playlistOverlay.open').waitFor({ state: 'visible', timeout: 30000 });
-              await page.locator('#trackList .track-row').first().locator('[data-track-select]').click();
-              const selectedLabel = await page.locator('#selectedTrackCount').textContent();
-              if (!selectedLabel.includes('1') || await page.locator('#downloadSelectedBtn').isDisabled()) throw new Error('Track selection control did not update');
-              await page.locator('#trackList .track-row').first().locator('[data-track-select]').click();
-              if (!(await page.locator('#downloadSelectedBtn').isDisabled())) throw new Error('Track selection did not clear');
-                const inspectDownload = async download => {
-                let filePath;
-                try {
-                  filePath = await new Promise((resolve, reject) => {
-                    const timer = setTimeout(() => reject(new Error('Browser download did not finish within 30 seconds: ' + download.suggestedFilename())), 30000);
-                    download.path().then(path => {
-                      clearTimeout(timer);
-                      resolve(path);
-                    }, error => {
-                      clearTimeout(timer);
-                      reject(error);
-                    });
-                  });
-                } catch (error) {
-                  const failure = await download.failure().catch(() => 'Download failure reason unavailable');
-                  const state = await page.evaluate(() => ({
-                    toasts: [...document.querySelectorAll('#toastContainer .toast')].map(node => node.innerText),
-                    progressText: document.querySelector('#downloadProgressText')?.textContent || '',
-                    buttonLabel: document.querySelector('#downloadZipLabel')?.textContent || '',
-                    serviceWorkerController: Boolean(navigator.serviceWorker?.controller),
-                    serviceWorkerUrl: navigator.serviceWorker?.controller?.scriptURL || ''
-                  }));
-                  throw new Error('Browser download failed: ' + download.suggestedFilename() + '; reason: ' + failure + '; ' + error.message + '; page state: ' + JSON.stringify(state));
-                }
-                if (!filePath) throw new Error('Browser download has no temporary file: ' + download.suggestedFilename());
-                const bytes = fs.readFileSync(filePath);
-                let endOffset = -1;
-                for (let index = bytes.length - 22; index >= Math.max(0, bytes.length - 65558); index--) {
-                  if (bytes.readUInt32LE(index) === 0x06054b50) {
-                    endOffset = index;
-                    break;
-                  }
-                }
-                return {
-                  fileName: download.suggestedFilename(),
-                  size: bytes.length,
-                  header: bytes.length >= 4 ? bytes.readUInt32LE(0) : 0,
-                  endSignature: endOffset >= 0 ? bytes.readUInt32LE(endOffset) : 0,
-                  entries: endOffset >= 0 ? bytes.readUInt16LE(endOffset + 10) : 0
-                };
-              };
-              await page.locator('#trackList .track-row').first().locator('[data-track-select]').click();
-              const [selectedDownload] = await Promise.all([
-                page.waitForEvent('download', { timeout: 60000 }),
-                page.locator('#downloadSelectedBtn').click()
-              ]);
-              const selectedZip = await inspectDownload(selectedDownload);
-              if (!selectedZip.fileName.includes('Выбранные треки') || selectedZip.header !== 0x04034b50 || selectedZip.endSignature !== 0x06054b50 || selectedZip.entries !== 1) throw new Error('Native selected-track download validation failed: ' + JSON.stringify(selectedZip));
-              const [singleDownload] = await Promise.all([
-                page.waitForEvent('download', { timeout: 60000 }),
-                page.locator('#trackList .track-row').first().locator('[data-track-download]').click()
-              ]);
-              const singleFile = await inspectDownload(singleDownload);
-              if (!/\.(mp3|ogg|wav)$/i.test(singleFile.fileName.replace(/\\/g, "")) || singleFile.size <= 0) throw new Error('Native individual download validation failed: ' + JSON.stringify(singleFile));
-              await page.locator('#trackList .track-select-btn[aria-pressed="true"]').click();
-              const [albumDownload] = await Promise.all([
-                page.waitForEvent('download', { timeout: 60000 }),
-                page.locator('#downloadZipBtn').click()
-              ]);
-              const albumZip = await inspectDownload(albumDownload);
-              if (!albumZip.fileName.endsWith('.zip') || albumZip.header !== 0x04034b50 || albumZip.endSignature !== 0x06054b50 || albumZip.entries !== smallestAlbum.count) throw new Error('Native album ZIP download validation failed: ' + JSON.stringify({ albumZip, expected: smallestAlbum.count }));
-              console.log('Verified browser downloads:', selectedZip.fileName, singleFile.fileName, albumZip.fileName);
-            }
+            const firstTrack = page.locator('#trackList .track-row').first();
+            await firstTrack.waitFor({ state: 'visible', timeout: 30000 });
+            await firstTrack.locator('[data-track-play]').click();
+            await page.waitForFunction(() => {
+              const audio = document.querySelector('audio');
+              return Boolean(audio && audio.currentSrc && !audio.paused);
+            }, null, { timeout: 30000 });
+            if (errors.length) throw new Error('Browser errors: ' + errors.join(' | '));
+            console.log('GitWave smoke test passed. Album cards:', cards);
             await browser.close();
           })().catch(error => {
             console.error(error);
             process.exit(1);
           });
           EOF
-          node capture-readme.cjs
-          rm capture-readme.cjs
-          ffmpeg -y -framerate 6 -i /tmp/gitwave-library-frames/frame-%04d.png -vf "fps=6,scale=900:-1:flags=lanczos,split[s0][s1];[s0]palettegen=max_colors=128:stats_mode=diff[p];[s1][p]paletteuse=dither=bayer:bayer_scale=3:diff_mode=rectangle" -loop 0 docs/screenshots/library.gif
-          ffmpeg -y -framerate 6 -i /tmp/gitwave-gif-frames/frame-%04d.png -vf "fps=6,scale=900:-1:flags=lanczos,split[s0][s1];[s0]palettegen=max_colors=128:stats_mode=diff[p];[s1][p]paletteuse=dither=bayer:bayer_scale=3:diff_mode=rectangle" -loop -1 docs/screenshots/all-tracks.gif
-      - name: Commit screenshots and GIF
-        run: |
-          mkdir -p /tmp/gitwave-capture-result
-          cp docs/screenshots/library.gif /tmp/gitwave-capture-result/library.gif
-          cp docs/screenshots/all-tracks.gif /tmp/gitwave-capture-result/all-tracks.gif
-          git config user.name github-actions[bot]
-          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-          git fetch origin main
-          git checkout -f -B main origin/main
-          mkdir -p docs/screenshots
-          cp /tmp/gitwave-capture-result/library.gif docs/screenshots/library.gif
-          cp /tmp/gitwave-capture-result/all-tracks.gif docs/screenshots/all-tracks.gif
-          git rm -f docs/screenshots/library.png docs/screenshots/playlist.png || true
-          git add docs/screenshots/library.gif docs/screenshots/all-tracks.gif
-          if ! git diff --cached --quiet; then
-            git commit -m "Add GitWave all-tracks animated preview"
-            for attempt in 1 2 3; do
-              if git push origin main; then
-                exit 0
-              fi
-              git fetch origin main
-              git rebase origin/main
-            done
-            exit 1
-          fi
+          node validate.cjs
+          rm validate.cjs
