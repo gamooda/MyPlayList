@@ -1052,7 +1052,7 @@ async function installAlbumToFolder(album) {
         if (token === installDownloadToken) elements.installFolderLabel.textContent = completed + "/" + album.tracks.length;
       }
     };
-    await Promise.all(Array.from({ length: Math.min(4, album.tracks.length) }, () => worker()));
+    await Promise.all(Array.from({ length: Math.min(6, album.tracks.length) }, () => worker()));
     const installed = album.tracks.length - failures.length;
     if (failures.length) {
       const firstFailure = failures[0];
