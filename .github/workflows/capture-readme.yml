@@ -235,6 +235,13 @@ jobs:
               await page.locator('#trackList .track-row').first().locator('[data-track-select]').click();
               if (!(await page.locator('#downloadSelectedBtn').isDisabled())) throw new Error('Track selection did not clear');
               await page.evaluate(() => {
+                const browserState = { blobs: [] };
+                const createObjectURL = URL.createObjectURL.bind(URL);
+                URL.createObjectURL = blob => {
+                  browserState.blobs.push(blob);
+                  return createObjectURL(blob);
+                };
+                window.__gitwaveBrowserDownloadTest = browserState;
                 const state = { options: null, chunks: [], bytes: null, completed: false };
                 Object.defineProperty(window, "showSaveFilePicker", {
                   configurable: true,
@@ -269,41 +276,52 @@ jobs:
                 });
                 window.__gitwaveSaveAsTest = state;
               });
-              const pickerReady = await page.evaluate(() => ({
-                picker: typeof window.showSaveFilePicker,
-                state: Boolean(window.__gitwaveSaveAsTest)
-              }));
-              if (pickerReady.picker !== 'function' || !pickerReady.state) throw new Error('Unable to install the Save As test dialog: ' + JSON.stringify(pickerReady));
               await page.locator('#trackList .track-row').first().locator('[data-track-select]').click();
-              await page.locator('#downloadSelectedBtn').click();
-              await page.waitForFunction(() => window.__gitwaveSaveAsTest?.completed && window.__gitwaveSaveAsTest?.bytes?.length > 0, null, { timeout: 180000 });
-              const selectedZip = await page.evaluate(() => {
-                const bytes = window.__gitwaveSaveAsTest.bytes;
-                const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+              const [selectedDownload] = await Promise.all([
+                page.waitForEvent('download', { timeout: 180000 }),
+                page.locator('#downloadSelectedBtn').click()
+              ]);
+              const selectedZip = await page.evaluate(async () => {
+                const blob = window.__gitwaveBrowserDownloadTest.blobs.at(-1);
+                if (!blob) return { error: 'No browser download Blob was created' };
+                const head = new DataView(await blob.slice(0, 4).arrayBuffer()).getUint32(0, true);
+                const tail = new Uint8Array(await blob.slice(Math.max(0, blob.size - 65558)).arrayBuffer());
+                const view = new DataView(tail.buffer, tail.byteOffset, tail.byteLength);
                 let end = -1;
-                for (let i = bytes.length - 22; i >= Math.max(0, bytes.length - 65558); i--) if (view.getUint32(i, true) === 0x06054b50) { end = i; break; }
-                return { name: window.__gitwaveSaveAsTest.options?.suggestedName || '', header: view.getUint32(0, true), entries: end >= 0 ? view.getUint16(end + 10, true) : 0 };
+                for (let i = tail.length - 22; i >= Math.max(0, tail.length - 65558); i--) {
+                  if (view.getUint32(i, true) === 0x06054b50) { end = i; break; }
+                }
+                return { type: blob.type, size: blob.size, header: head, entries: end >= 0 ? view.getUint16(end + 10, true) : 0 };
               });
-              if (!selectedZip.name.includes('Выбранные треки') || selectedZip.header !== 0x04034b50 || selectedZip.entries !== 1) throw new Error('Selected-track ZIP validation failed: ' + JSON.stringify(selectedZip));
-              await page.locator('#trackList .track-select-btn[aria-pressed="true"]').click();
-              await page.evaluate(() => {
-                window.__gitwaveSaveAsTest.options = null;
-                window.__gitwaveSaveAsTest.chunks = [];
-                window.__gitwaveSaveAsTest.bytes = null;
-                window.__gitwaveSaveAsTest.completed = false;
-              });
+              if (!selectedDownload.suggestedFilename().includes('Выбранные треки') || selectedZip.header !== 0x04034b50 || selectedZip.entries !== 1) throw new Error('Browser selected ZIP download validation failed: ' + JSON.stringify({ filename: selectedDownload.suggestedFilename(), selectedZip }));
               await page.locator('#trackList .track-row').first().locator('[data-track-download]').click();
-              await page.waitForFunction(() => window.__gitwaveSaveAsTest?.completed && window.__gitwaveSaveAsTest?.bytes?.length > 0, null, { timeout: 180000 });
-              const singleFile = await page.evaluate(() => ({ name: window.__gitwaveSaveAsTest.options?.suggestedName || '', size: window.__gitwaveSaveAsTest.bytes?.length || 0 }));
-              if (!/\.(mp3|ogg|wav)$/i.test(singleFile.name) || singleFile.size <= 0) throw new Error('Individual track download validation failed: ' + JSON.stringify(singleFile));
-              await page.evaluate(() => {
-                window.__gitwaveSaveAsTest.options = null;
-                window.__gitwaveSaveAsTest.chunks = [];
-                window.__gitwaveSaveAsTest.bytes = null;
-                window.__gitwaveSaveAsTest.completed = false;
+              const [singleDownload] = await Promise.all([
+                page.waitForEvent('download', { timeout: 180000 }),
+                page.locator('#trackList .track-row').first().locator('[data-track-download]').click()
+              ]);
+              const singleFile = await page.evaluate(() => {
+                const blob = window.__gitwaveBrowserDownloadTest.blobs.at(-1);
+                return { type: blob?.type || '', size: blob?.size || 0 };
               });
-              await page.locator('#downloadZipBtn').click();
-              await page.waitForFunction(() => Boolean(window.__gitwaveSaveAsTest?.options), null, { timeout: 10000 });
+              if (!/\\.(mp3|ogg|wav)$/i.test(singleDownload.suggestedFilename()) || singleFile.size <= 0 || !singleFile.type.startsWith('audio/')) throw new Error('Browser individual download validation failed: ' + JSON.stringify({ filename: singleDownload.suggestedFilename(), singleFile }));
+              await page.locator('#trackList .track-select-btn[aria-pressed="true"]').click();
+              const [albumDownload] = await Promise.all([
+                page.waitForEvent('download', { timeout: 180000 }),
+                page.locator('#downloadZipBtn').click()
+              ]);
+              const albumZip = await page.evaluate(async () => {
+                const blob = window.__gitwaveBrowserDownloadTest.blobs.at(-1);
+                const head = new DataView(await blob.slice(0, 4).arrayBuffer()).getUint32(0, true);
+                const tail = new Uint8Array(await blob.slice(Math.max(0, blob.size - 65558)).arrayBuffer());
+                const view = new DataView(tail.buffer, tail.byteOffset, tail.byteLength);
+                let end = -1;
+                for (let i = tail.length - 22; i >= Math.max(0, tail.length - 65558); i--) {
+                  if (view.getUint32(i, true) === 0x06054b50) { end = i; break; }
+                }
+                return { type: blob.type, size: blob.size, header: head, endSignature: end >= 0 ? view.getUint32(end, true) : 0, entries: end >= 0 ? view.getUint16(end + 10, true) : 0 };
+              });
+              if (!albumDownload.suggestedFilename().endsWith('.zip') || albumZip.header !== 0x04034b50 || albumZip.endSignature !== 0x06054b50 || albumZip.entries !== smallestAlbum.count) throw new Error('Browser album ZIP download validation failed: ' + JSON.stringify({ filename: albumDownload.suggestedFilename(), albumZip, expected: smallestAlbum.count }));
+              await page.locator('#downloadZipSaveAsBtn').click();
               await page.waitForFunction(() => window.__gitwaveSaveAsTest?.completed && window.__gitwaveSaveAsTest?.bytes?.length > 0, null, { timeout: 180000 }).catch(async error => {
                 const state = await page.evaluate(errors => ({
                   options: window.__gitwaveSaveAsTest?.options,
@@ -312,7 +330,7 @@ jobs:
                   label: document.querySelector('#downloadZipLabel')?.textContent || '',
                   errors
                 }), pageErrors);
-                throw new Error('ZIP Save As test did not finish: ' + JSON.stringify(state) + ' ' + error.message);
+                throw new Error('Save As streaming test did not finish: ' + JSON.stringify(state) + ' ' + error.message);
               });
               const saved = await page.evaluate(() => {
                 const state = window.__gitwaveSaveAsTest;
@@ -336,8 +354,9 @@ jobs:
               });
               if (!saved.fileName.endsWith('.zip')) throw new Error('Save As picker did not suggest a ZIP filename: ' + saved.fileName);
               if (!saved.mime.includes('.zip')) throw new Error('Save As picker did not register ZIP file type');
-              if (saved.header !== 0x04034b50 || saved.endSignature !== 0x06054b50) throw new Error('Saved ZIP archive has invalid headers');
-              if (saved.entries !== smallestAlbum.count) throw new Error('ZIP archive entry count does not match selected album');
+              if (saved.header !== 0x04034b50 || saved.endSignature !== 0x06054b50) throw new Error('Save As archive has invalid headers');
+              if (saved.entries !== smallestAlbum.count) throw new Error('Save As archive entry count does not match selected album');
+              console.log('Verified browser downloads:', selectedDownload.suggestedFilename(), singleDownload.suggestedFilename(), albumDownload.suggestedFilename());
               console.log('Verified Save As ZIP:', saved.fileName, saved.size, 'bytes,', saved.entries, 'track(s)');
             }
             await browser.close();
