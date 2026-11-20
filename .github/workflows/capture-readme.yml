@@ -1,15 +1,19 @@
 name: Capture GitWave screenshots
 
 on:
-  workflow_run:
-    workflows:
-      - pages build and deployment
-    types:
-      - completed
+  push:
     branches:
       - main
+    paths:
+      - index.html
+      - README.md
+      - music/**
+      - ico-main/**
+      - .github/workflows/capture-readme.yml
+  workflow_dispatch:
 
 permissions:
+  actions: read
   contents: write
 
 concurrency:
@@ -18,30 +22,58 @@ concurrency:
 
 jobs:
   screenshots:
-    if: >-
-      github.event.workflow_run.conclusion == 'success' &&
-      github.event.workflow_run.head_branch == 'main' &&
-      github.event.workflow_run.head_repository.full_name == github.repository &&
-      !contains(github.event.workflow_run.head_commit.message, 'Add GitWave all-tracks animated preview')
     runs-on: ubuntu-latest
     env:
-      DEPLOYED_SHA: ${{ github.event.workflow_run.head_sha }}
+      DEPLOYED_SHA: ${{ github.sha }}
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.workflow_run.head_sha }}
-      - name: Confirm Pages deployment
+          ref: ${{ github.sha }}
+      - name: Wait for GitHub Pages deployment
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          echo "GitHub Pages deployment completed successfully for $DEPLOYED_SHA"
+          echo "Waiting for Pages deployment of $DEPLOYED_SHA"
+          for attempt in $(seq 1 120); do
+            run_info=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs?head_sha=$DEPLOYED_SHA&per_page=100" --jq '.workflow_runs[] | select(.name == "pages build and deployment") | [.id, .status, (.conclusion // "")] | @tsv' | tail -n 1)
+            if [ -n "$run_info" ]; then
+              IFS=$'\t' read -r run_id status conclusion <<< "$run_info"
+              echo "Pages run $run_id: $status \${conclusion:-pending}"
+              if [ "$status" = "completed" ]; then
+                if [ "$conclusion" = "success" ]; then
+                  echo "Pages deployment succeeded for $DEPLOYED_SHA"
+                  exit 0
+                fi
+                echo "Pages deployment failed: $conclusion"
+                exit 1
+              fi
+            fi
+            sleep 5
+          done
+          echo "Timed out waiting for Pages deployment of $DEPLOYED_SHA"
+          exit 1
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+      - uses: actions/cache@v4
+        id: capture-cache
+        with:
+          path: |
+            ~/.cache/ms-playwright
+            ${{ runner.temp }}/gitwave-capture/node_modules
+          key: ${{ runner.os }}-gitwave-capture-v2
       - name: Install capture tools
         run: |
-          npm install --prefix "$RUNNER_TEMP/gitwave-capture" playwright
-          "$RUNNER_TEMP/gitwave-capture/node_modules/.bin/playwright" install --with-deps chromium
-          sudo apt-get update
-          sudo apt-get install -y ffmpeg
+          if [ ! -d "$RUNNER_TEMP/gitwave-capture/node_modules/playwright" ]; then
+            npm install --prefix "$RUNNER_TEMP/gitwave-capture" playwright
+          fi
+          if ! compgen -G "$HOME/.cache/ms-playwright/chromium-*" > /dev/null; then
+            "$RUNNER_TEMP/gitwave-capture/node_modules/.bin/playwright" install --with-deps chromium
+          fi
+          if ! command -v ffmpeg >/dev/null 2>&1; then
+            sudo apt-get update
+            sudo apt-get install -y ffmpeg
+          fi
       - name: Capture GitWave screens and all-tracks GIF
         env:
           PLAYWRIGHT_PATH: ${{ runner.temp }}/gitwave-capture/node_modules/playwright
@@ -51,24 +83,21 @@ jobs:
           const { chromium } = require(process.env.PLAYWRIGHT_PATH);
           (async () => {
             const browser = await chromium.launch({ headless: true });
-            const page = await browser.newPage({ viewport: { width: 1440, height: 1000 }, deviceScaleFactor: 1 });
+            const page = await browser.newPage({ viewport: { width: 1280, height: 800 }, deviceScaleFactor: 1 });
             const pageErrors = [];
-            page.setDefaultTimeout(60000);
+            page.setDefaultTimeout(45000);
             page.on('pageerror', error => pageErrors.push(String(error)));
             page.on('console', message => {
               if (message.type() === 'error') console.error('PAGE CONSOLE:', message.text());
             });
             const captureUrl = 'https://gamooda.github.io/gitwave/?capture=' + process.env.DEPLOYED_SHA;
             console.log('Opening deployed revision:', process.env.DEPLOYED_SHA, captureUrl);
-            await page.goto(captureUrl, { waitUntil: 'networkidle', timeout: 180000 }).catch(async error => {
-              console.error('Initial navigation did not reach networkidle:', error.message);
-              await page.goto(captureUrl, { waitUntil: 'domcontentloaded', timeout: 180000 });
-            });
+            await page.goto(captureUrl, { waitUntil: 'domcontentloaded', timeout: 90000 });
             await page.waitForFunction(() => {
               const grid = document.querySelector('#albumGrid');
               const status = document.querySelector('#syncStatus');
               return Boolean(grid && (grid.querySelector('.album-card') || status?.classList.contains('error')));
-            }, { timeout: 240000 }).catch(async () => {
+            }, { timeout: 180000 }).catch(async () => {
               const state = await page.evaluate(() => ({
                 title: document.title,
                 url: location.href,
@@ -81,64 +110,63 @@ jobs:
               }));
               throw new Error('GitWave library did not finish loading: ' + JSON.stringify(state));
             });
-            await page.waitForFunction(() => document.querySelector('#albumGrid .album-card'), { timeout: 60000 });
-            await page.waitForTimeout(1800);
+            await page.waitForSelector('#albumGrid .album-card', { state: 'visible', timeout: 45000 });
+            await page.waitForFunction(() => {
+              const images = [...document.querySelectorAll('#albumGrid img')];
+              return images.every(image => image.complete);
+            }, { timeout: 20000 }).catch(() => {});
+            await page.evaluate(() => document.fonts.ready);
             await page.screenshot({ path: 'docs/screenshots/library.png', fullPage: true });
             await page.locator('article[data-album-id="__all_tracks__"]').click();
-            await page.locator('#playlistOverlay.open').waitFor({ state: 'visible', timeout: 60000 });
-            await page.locator('#trackList .track-group-heading').first().waitFor({ state: 'visible', timeout: 60000 });
-            await page.waitForTimeout(1000);
+            await page.locator('#playlistOverlay.open').waitFor({ state: 'visible', timeout: 30000 });
+            await page.locator('#trackList .track-group-heading').first().waitFor({ state: 'visible', timeout: 30000 });
             const list = page.locator('#trackList');
             const groups = await list.locator('.track-group-heading').count();
             let frame = 0;
-            const capture = async () => {
-              await page.screenshot({ path: '/tmp/gitwave-gif-frames/frame-' + String(frame++).padStart(4, '0') + '.png' });
+            const capture = async (copies = 1) => {
+              for (let i = 0; i < copies; i++) {
+                await page.screenshot({ path: '/tmp/gitwave-gif-frames/frame-' + String(frame++).padStart(4, '0') + '.png' });
+              }
             };
-            await capture();
+            await capture(2);
             for (let g = 0; g < groups; g++) {
               const heading = list.locator('.track-group-heading').nth(g);
-              const rows = await heading.evaluate(el => {
-                const result = [];
+              const metrics = await heading.evaluate(el => {
                 let node = el.nextElementSibling;
+                let count = 0;
+                let endTop = el.offsetTop;
                 while (node && !node.classList.contains('track-group-heading')) {
-                  if (node.classList.contains('track-row')) result.push(node);
+                  if (node.classList.contains('track-row')) {
+                    count++;
+                    endTop = node.offsetTop;
+                  }
                   node = node.nextElementSibling;
                 }
-                return result.length;
+                return { count, endTop };
               });
-              if (!rows) continue;
+              if (!metrics.count) continue;
               await heading.scrollIntoViewIfNeeded();
-              await page.waitForTimeout(250);
+              await page.waitForTimeout(150);
               const firstRow = heading.locator('xpath=following-sibling::div[contains(@class,"track-row")][1]');
               await firstRow.click();
-              await page.waitForTimeout(850);
-              await capture();
-              const rowLocators = await heading.evaluate(el => {
-                const result = [];
-                let node = el.nextElementSibling;
-                while (node && !node.classList.contains('track-group-heading')) {
-                  if (node.classList.contains('track-row')) result.push(node);
-                  node = node.nextElementSibling;
-                }
-                return result.map((el, index) => ({ index, top: el.offsetTop, height: el.offsetHeight }));
-              });
-              const startTop = heading.evaluate(el => el.offsetTop);
-              const endTop = rowLocators.length ? rowLocators[rowLocators.length - 1].top : startTop;
+              await page.waitForTimeout(400);
+              await capture(3);
               const from = await list.evaluate(el => el.scrollTop);
-              const target = Math.max(from, endTop - await list.evaluate(el => el.clientHeight) + 110);
-              const steps = Math.max(4, Math.ceil(Math.abs(target - from) / 125));
+              const viewport = await list.evaluate(el => el.clientHeight);
+              const target = Math.max(from, metrics.endTop - viewport + 110);
+              const steps = Math.max(3, Math.ceil(Math.abs(target - from) / 220));
               for (let s = 1; s <= steps; s++) {
                 const position = Math.round(from + (target - from) * s / steps);
                 await list.evaluate((el, value) => { el.scrollTop = value; }, position);
-                await page.waitForTimeout(115);
+                await page.waitForTimeout(80);
                 await capture();
               }
-              await page.waitForTimeout(250);
+              await page.waitForTimeout(120);
             }
             await list.evaluate(el => { el.scrollTop = el.scrollHeight; });
-            await page.waitForTimeout(2500);
-            await capture();
+            await capture(15);
             await browser.close();
+            console.log('Captured frames:', frame, 'categories:', groups);
           })().catch(error => {
             console.error(error);
             process.exit(1);
@@ -146,7 +174,7 @@ jobs:
           EOF
           node capture-readme.cjs
           rm capture-readme.cjs
-          ffmpeg -y -framerate 4 -i /tmp/gitwave-gif-frames/frame-%04d.png -vf "fps=4,scale=960:-1:flags=lanczos,split[s0][s1];[s0]palettegen=max_colors=128:stats_mode=diff[p];[s1][p]paletteuse=dither=bayer:bayer_scale=3:diff_mode=rectangle" -loop 0 docs/screenshots/all-tracks.gif
+          ffmpeg -y -framerate 6 -i /tmp/gitwave-gif-frames/frame-%04d.png -vf "fps=6,scale=900:-1:flags=lanczos,split[s0][s1];[s0]palettegen=max_colors=128:stats_mode=diff[p];[s1][p]paletteuse=dither=bayer:bayer_scale=3:diff_mode=rectangle" -loop -1 docs/screenshots/all-tracks.gif
       - name: Commit screenshots and GIF
         run: |
           mkdir -p /tmp/gitwave-capture-result
