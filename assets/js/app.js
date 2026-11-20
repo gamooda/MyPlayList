@@ -334,6 +334,8 @@ let isSeeking = false;
 let toastTimer = null;
 let zipDownloadActive = false;
 let zipDownloadToken = 0;
+const activeDownloadControllers = new Set();
+let zipDownloadController = null;
 const selectedTrackKeys = new Set();
 let audioReady = false;
 let audioContext = null;
@@ -940,12 +942,12 @@ function buildZipArchive(entries) {
   return new Blob([...localParts, ...centralParts, end], { type: "application/zip" });
 }
 
-async function fetchZipTrack(track) {
+async function fetchZipTrack(track, signal) {
   const sources = [...new Set([track.url, track.fallbackUrl].filter(Boolean))];
   let lastError = null;
   for (const source of sources) {
     try {
-      const response = await fetch(source, { mode: "cors", credentials: "omit", cache: "force-cache", signal: AbortSignal.timeout(300000) });
+      const response = await fetch(source, { mode: "cors", credentials: "omit", cache: "force-cache", signal: signal || AbortSignal.timeout(300000) });
       if (!response.ok) throw new Error("HTTP " + response.status);
       const bytes = new Uint8Array(await response.arrayBuffer());
       if (!bytes.length) throw new Error("пустой файл");
@@ -1092,6 +1094,8 @@ function triggerBrowserDownload(blob, fileName) {
 
 async function downloadSingleTrack(track) {
   if (!track) return;
+  const controller = new AbortController();
+  activeDownloadControllers.add(controller);
   let downloadSession = null;
   try {
     const extension = String(track.fileName || "track.mp3").split(".").pop().toLowerCase();
@@ -1099,7 +1103,7 @@ async function downloadSingleTrack(track) {
     const fileName = safeZipSegment(track.fileName || track.title + "." + extension);
     downloadSession = createBrowserDownloadSession(fileName, mime);
     showToast("Загружаю: " + (track.title || track.fileName), "info");
-    const bytes = await fetchZipTrack(track);
+    const bytes = await fetchZipTrack(track, controller.signal);
     if (downloadSession) {
       await downloadSession.writable.write(bytes);
       await downloadSession.writable.close();
@@ -1110,6 +1114,8 @@ async function downloadSingleTrack(track) {
   } catch (error) {
     if (downloadSession) await downloadSession.writable.abort().catch(() => {});
     if (error && error.name !== "AbortError") showToast(error.message || "Не удалось скачать трек.", "error");
+  } finally {
+    activeDownloadControllers.delete(controller);
   }
 }
 
@@ -1138,6 +1144,24 @@ function getSelectedTrackEntries() {
   return entries;
 }
 
+function cancelActiveDownloads() {
+  if (!activeDownloadControllers.size && !zipDownloadActive) return;
+  if (zipDownloadActive) {
+    zipDownloadToken++;
+    zipDownloadActive = false;
+  }
+  activeDownloadControllers.forEach(controller => controller.abort());
+  activeDownloadControllers.clear();
+  if (zipDownloadController) zipDownloadController = null;
+  elements.downloadZip.disabled = !viewedAlbum || !viewedAlbum.tracks.length;
+  elements.downloadSelected.disabled = getSelectedTrackEntries().length === 0;
+  elements.downloadZipLabel.textContent = "Скачать ZIP";
+  elements.downloadProgress.hidden = true;
+  elements.downloadProgressFill.style.width = "0%";
+  elements.downloadProgressText.textContent = "Загрузка отменена";
+  elements.downloadProgressStats.textContent = "";
+}
+
 async function downloadAlbumZip(album) {
   if (!album) return;
   const title = album.isAllTracks ? "GitWave - Все треки" : album.folder || album.title;
@@ -1161,6 +1185,9 @@ async function downloadZipItems(title, items) {
   }
   const suggestedName = safeZipSegment(title) + ".zip";
   const token = ++zipDownloadToken;
+  const controller = new AbortController();
+  zipDownloadController = controller;
+  activeDownloadControllers.add(controller);
   zipDownloadActive = true;
   elements.downloadZip.disabled = true;
   elements.downloadSelected.disabled = true;
@@ -1193,12 +1220,13 @@ async function downloadZipItems(title, items) {
         if (index >= items.length) return;
         const item = items[index];
         try {
-          const bytes = await fetchZipTrack(item.track);
+          const bytes = await fetchZipTrack(item.track, controller.signal);
           totalBytes += bytes.length;
           const entry = { name: zipTrackName(item.album, item.track), bytes };
           if (zipWriter) await zipWriter.add(entry);
           else fallbackEntries[index] = entry;
         } catch (error) {
+          if (controller.signal.aborted) throw error;
           failures.push(error);
         }
         completed++;
@@ -1231,6 +1259,8 @@ async function downloadZipItems(title, items) {
     else if (writable) await writable.abort().catch(() => {});
     if (error && error.name !== "AbortError") showToast(error.message || "Не удалось сохранить ZIP-архив.", "error");
   } finally {
+    activeDownloadControllers.delete(controller);
+    if (zipDownloadController === controller) zipDownloadController = null;
     if (token === zipDownloadToken) {
       zipDownloadActive = false;
       elements.downloadZip.disabled = !viewedAlbum || !viewedAlbum.tracks.length;
@@ -2055,6 +2085,7 @@ function setAmbientBackground(url, album = null) {
 
 function openAlbum(album) {
   if (!album) return;
+  if (viewedAlbum && viewedAlbum !== album) cancelActiveDownloads();
   viewedAlbum = album;
   elements.playlistSearch.value = "";
   const activeTrack = currentAlbum && currentTrackIndex >= 0 ? currentAlbum.tracks[currentTrackIndex] : null;
@@ -2080,6 +2111,7 @@ function openAlbum(album) {
 }
 
 function closeAlbum() {
+  cancelActiveDownloads();
   elements.overlay.classList.remove("open");
   elements.overlay.setAttribute("aria-hidden", "true");
   document.body.style.overflow = "";
