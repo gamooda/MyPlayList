@@ -1146,11 +1146,12 @@ async function resolveRepositoryBranch() {
   return repositoryBranch;
 }
 
-function mediaUrls(filePath, downloadUrl = "") {
-  const fallback = downloadUrl || rawFallbackPath(filePath);
+function mediaUrls(filePath, downloadUrl = "", version = "") {
+  const appendVersion = url => url && version ? `${url}${url.includes("?") ? "&" : "?"}v=${encodeURIComponent(version)}` : url;
+  const fallback = appendVersion(downloadUrl || rawFallbackPath(filePath));
   if (!repositoryBranch || !repository) return { url: fallback, fallbackUrl: "" };
   const safePath = String(filePath).split("/").map(encodeURIComponent).join("/");
-  const cdn = `https://cdn.jsdelivr.net/gh/${encodeURIComponent(repository.owner)}/${encodeURIComponent(repository.repo)}@${encodeURIComponent(repositoryBranch)}/${safePath}`;
+  const cdn = appendVersion(`https://cdn.jsdelivr.net/gh/${encodeURIComponent(repository.owner)}/${encodeURIComponent(repository.repo)}@${encodeURIComponent(repositoryBranch)}/${safePath}`);
   return { url: cdn, fallbackUrl: fallback && fallback !== cdn ? fallback : "" };
 }
 
@@ -1221,7 +1222,7 @@ async function fetchRepositoryTree() {
 }
 
 function makeTrackRecord(file) {
-  const media = mediaUrls(file.path, file.download_url || "");
+  const media = mediaUrls(file.path, file.download_url || "", file.sha || "");
   const durationKey = `${file.path}:${file.sha || file.size || 0}`;
   const cachedDuration = Number(durationCache[durationKey]) || 0;
   const estimatedDuration = cachedDuration || estimateDurationFromSize(file.name, file.size);
@@ -1246,9 +1247,9 @@ function makeAlbumRecord(directoryName, directoryPath, files) {
   const background = findNamedPng(files, "background");
   const logo = findNamedPng(files, "logo");
   const tracks = files.filter(file => file.type === "file" && /\.(mp3|ogg|wav)$/i.test(file.name)).sort((a, b) => a.name.localeCompare(b.name, "ru", { numeric: true, sensitivity: "base" })).map(makeTrackRecord);
-  const coverMedia = preview ? mediaUrls(preview.path, preview.download_url || "") : { url: "", fallbackUrl: "" };
-  const backgroundMedia = background ? mediaUrls(background.path, background.download_url || "") : { url: "", fallbackUrl: "" };
-  const logoMedia = logo ? mediaUrls(logo.path, logo.download_url || "") : { url: "", fallbackUrl: "" };
+  const coverMedia = preview ? mediaUrls(preview.path, preview.download_url || "", preview.sha || "") : { url: "", fallbackUrl: "" };
+  const backgroundMedia = background ? mediaUrls(background.path, background.download_url || "", background.sha || "") : { url: "", fallbackUrl: "" };
+  const logoMedia = logo ? mediaUrls(logo.path, logo.download_url || "", logo.sha || "") : { url: "", fallbackUrl: "" };
   return {
     id: directoryPath,
     folder: directoryName,
@@ -1268,12 +1269,12 @@ function setBrandAssetsFromFiles(files) {
   const gitwave = files.find(file => file.type === "file" && file.name.toLowerCase() === "gitwave.svg");
   const allTracksIcon = files.find(file => file.type === "file" && file.name.toLowerCase() === "all_tracks.svg") || files.find(file => file.type === "file" && file.name.toLowerCase() === "all_tacks.svg");
   if (gitwave) {
-    const media = mediaUrls(gitwave.path, gitwave.download_url || "");
+    const media = mediaUrls(gitwave.path, gitwave.download_url || "", gitwave.sha || "");
     repositoryAssets.gitwave = media.url;
     repositoryAssets.gitwaveFallback = media.fallbackUrl;
   }
   if (allTracksIcon) {
-    const media = mediaUrls(allTracksIcon.path, allTracksIcon.download_url || "");
+    const media = mediaUrls(allTracksIcon.path, allTracksIcon.download_url || "", allTracksIcon.sha || "");
     repositoryAssets.allTracksIcon = media.url;
     repositoryAssets.allTracksIconFallback = media.fallbackUrl;
   }
@@ -1313,12 +1314,12 @@ function assetsFromRootFiles(files) {
   const rootBackground = findNamedPng(files, "background");
   const rootLogo = findNamedPng(files, "logo");
   if (rootBackground) {
-    const media = mediaUrls(rootBackground.path, rootBackground.download_url || "");
+    const media = mediaUrls(rootBackground.path, rootBackground.download_url || "", rootBackground.sha || "");
     repositoryAssets.background = media.url;
     repositoryAssets.backgroundFallback = media.fallbackUrl;
   }
   if (rootLogo) {
-    const media = mediaUrls(rootLogo.path, rootLogo.download_url || "");
+    const media = mediaUrls(rootLogo.path, rootLogo.download_url || "", rootLogo.sha || "");
     repositoryAssets.logo = media.url;
     repositoryAssets.logoFallback = media.fallbackUrl;
   }
@@ -1345,7 +1346,7 @@ async function scanMusicWithTree(treeData) {
     if (!repositoryAssets.background) {
       const file = findNamedPng(fallbackAssets, "background");
       if (file) {
-        const media = mediaUrls(file.path);
+        const media = mediaUrls(file.path, "", file.sha || "");
         repositoryAssets.background = media.url;
         repositoryAssets.backgroundFallback = media.fallbackUrl;
       }
@@ -1353,7 +1354,7 @@ async function scanMusicWithTree(treeData) {
     if (!repositoryAssets.logo) {
       const file = findNamedPng(fallbackAssets, "logo");
       if (file) {
-        const media = mediaUrls(file.path);
+        const media = mediaUrls(file.path, "", file.sha || "");
         repositoryAssets.logo = media.url;
         repositoryAssets.logoFallback = media.fallbackUrl;
       }
@@ -1475,11 +1476,43 @@ function startRepositoryUpdateTimer() {
   }, 30000);
 }
 
-async function ensureBrandAssets() {
-  if (repositoryAssets.gitwave && repositoryAssets.allTracksIcon) return;
+function refreshAlbumMediaFromTree(albumList, tree) {
+  const files = tree.filter(item => item.type === "blob");
+  albumList.forEach(album => {
+    const prefix = `${String(album.path || "").replace(/\/+$/g, "")}/`;
+    const contents = files.filter(item => item.path.toLowerCase().startsWith(prefix.toLowerCase()) && !item.path.slice(prefix.length).includes("/")).map(item => ({
+      type: "file",
+      name: item.path.slice(prefix.length),
+      path: item.path,
+      sha: item.sha,
+      size: item.size
+    }));
+    const previews = contents.filter(file => /^preview\.(png|jpe?g|webp)$/i.test(file.name));
+    const order = ["png", "jpg", "jpeg", "webp"];
+    previews.sort((a, b) => order.indexOf(a.name.split(".").pop().toLowerCase()) - order.indexOf(b.name.split(".").pop().toLowerCase()));
+    const preview = previews[0];
+    const background = findNamedPng(contents, "background");
+    const logo = findNamedPng(contents, "logo");
+    const coverMedia = preview ? mediaUrls(preview.path, "", preview.sha) : { url: "", fallbackUrl: "" };
+    const backgroundMedia = background ? mediaUrls(background.path, "", background.sha) : { url: "", fallbackUrl: "" };
+    const logoMedia = logo ? mediaUrls(logo.path, "", logo.sha) : { url: "", fallbackUrl: "" };
+    album.cover = coverMedia.url;
+    album.coverFallback = coverMedia.fallbackUrl;
+    album.background = backgroundMedia.url;
+    album.backgroundFallback = backgroundMedia.fallbackUrl;
+    album.logo = logoMedia.url;
+    album.logoFallback = logoMedia.fallbackUrl;
+  });
+}
+
+async function ensureBrandAssets(force = false) {
+  if (!force && repositoryAssets.gitwave && repositoryAssets.allTracksIcon) return;
   try {
     const treeData = await fetchRepositoryTree();
-    if (treeData && !treeData.truncated) setBrandAssetsFromTree(treeData.tree);
+    if (treeData && !treeData.truncated) {
+      setBrandAssetsFromTree(treeData.tree);
+      if (force) refreshAlbumMediaFromTree(albums, treeData.tree);
+    }
   } catch (error) {
     repositoryAssets.gitwave = repositoryAssets.gitwave || "";
     repositoryAssets.allTracksIcon = repositoryAssets.allTracksIcon || "";
@@ -1509,7 +1542,7 @@ async function loadLibrary(force = false) {
     }
     albums = result;
     buildAllTracksAlbum();
-    await ensureBrandAssets();
+    await ensureBrandAssets(fromCache);
     applyLibraryAssets();
     renderAlbums();
     setStatus("ready", fromCache ? "Библиотека из кэша" : "Библиотека синхронизирована");
