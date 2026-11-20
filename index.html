@@ -128,10 +128,10 @@ body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;ba
 .playlist-breadcrumb{display:flex;align-items:center;gap:9px;color:#85818f;font-size:10px;font-weight:800;letter-spacing:1.3px;text-transform:uppercase}
 .playlist-breadcrumb span{color:#c4b5fd}
 .playlist-topline-actions{display:flex;align-items:center;gap:8px;margin-left:auto}
-.download-zip-btn{height:34px;display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:0 12px;border:1px solid rgba(var(--active-rgb),.42);border-radius:8px;background:linear-gradient(135deg,rgba(var(--active-rgb),.2),rgba(var(--active-accent-rgb),.12));color:#e7e8ec;font-size:10px;font-weight:800;white-space:nowrap;cursor:pointer;transition:all .2s,background .7s,border-color .7s}
-.download-zip-btn:hover:not(:disabled){transform:translateY(-1px);border-color:rgba(var(--active-rgb),.72);background:rgba(var(--active-rgb),.24)}
-.download-zip-btn:disabled{opacity:.55;cursor:wait}
-.download-zip-btn svg{width:15px;height:15px;flex:none;color:rgb(var(--active-rgb))}
+.install-folder-btn{height:34px;display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:0 12px;border:1px solid rgba(var(--active-rgb),.42);border-radius:8px;background:linear-gradient(135deg,rgba(var(--active-rgb),.2),rgba(var(--active-accent-rgb),.12));color:#e7e8ec;font-size:10px;font-weight:800;white-space:nowrap;cursor:pointer;transition:all .2s,background .7s,border-color .7s}
+.install-folder-btn:hover:not(:disabled){transform:translateY(-1px);border-color:rgba(var(--active-rgb),.72);background:rgba(var(--active-rgb),.24)}
+.install-folder-btn:disabled{opacity:.55;cursor:wait}
+.install-folder-btn svg{width:15px;height:15px;flex:none;color:rgb(var(--active-rgb))}
 .close-playlist{width:32px;height:32px;display:grid;place-items:center;flex:none;border:1px solid rgba(63,63,70,.8);border-radius:8px;background:rgba(255,255,255,.04);color:#a1a1aa;cursor:pointer;transition:all .2s}
 .close-playlist:hover{background:rgba(239,68,68,.12);border-color:rgba(239,68,68,.4);color:#fca5a5}
 .close-playlist svg{width:16px;height:16px}
@@ -324,7 +324,7 @@ body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;ba
 <div class="playlist-overlay" id="playlistOverlay" aria-hidden="true">
 <div class="playlist-scrim" id="playlistScrim"></div><div class="playlist-ambient" id="playlistAmbient"></div>
 <section class="playlist-window" role="dialog" aria-modal="true" aria-label="Плейлист альбома">
-<div class="playlist-topline"><div class="playlist-breadcrumb">GITWAVE <span>/</span> PLAYLIST</div><div class="playlist-topline-actions"><button class="download-zip-btn" id="downloadZipBtn" type="button" title="Скачать альбом в ZIP-архиве"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0 4-4m-4 4-4-4"/><path d="M4 16v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></svg><span id="downloadZipLabel">Скачать ZIP</span></button><button class="close-playlist" id="closePlaylist" type="button" aria-label="Закрыть плейлист"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m18 6-12 12M6 6l12 12"/></svg></button></div></div>
+<div class="playlist-topline"><div class="playlist-breadcrumb">GITWAVE <span>/</span> PLAYLIST</div><div class="playlist-topline-actions"><button class="install-folder-btn" id="installFolderBtn" type="button" title="Выбрать папку и сохранить в неё аудиофайлы"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 7.5a2 2 0 0 1 2-2h4l2 2h6.9a2 2 0 0 1 2 2v1"/><path d="M12 12v8m-4-4 4 4 4-4"/><path d="M3.5 10.5h8"/></svg><span id="installFolderLabel">Установить</span></button><button class="close-playlist" id="closePlaylist" type="button" aria-label="Закрыть плейлист"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m18 6-12 12M6 6l12 12"/></svg></button></div></div>
 <div class="playlist-body">
 <aside class="playlist-aside"><div class="playlist-cover-shell"><img class="playlist-cover" id="playlistCover" alt="Обложка альбома"><div class="all-cover-mosaic playlist-cover-mosaic" id="playlistCoverMosaic" hidden></div><div class="playlist-cover-placeholder" id="playlistCoverFallback"><svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2"><circle cx="32" cy="32" r="23"/><circle cx="32" cy="32" r="15"/><circle cx="32" cy="32" r="5" fill="currentColor" stroke="none"/></svg></div></div><h2 class="playlist-album-title" id="playlistAlbumTitle">Альбом</h2><p class="playlist-album-meta" id="playlistAlbumMeta">0 треков</p><div class="playlist-actions"><button class="play-all-btn" id="playAllBtn" type="button" aria-label="Слушать"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.5c0-.8.87-1.28 1.54-.85l10.2 6.5a1 1 0 0 1 0 1.7l-10.2 6.5A1 1 0 0 1 8 18.5v-13Z"/></svg><span>Слушать</span></button><button class="playlist-secondary" id="shuffleAlbumBtn" type="button">Перемешать</button></div></aside>
 <div class="playlist-right"><label class="playlist-search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7.5"/><path d="m20 20-4-4"/></svg><input id="playlistSearch" type="search" placeholder="Найти трек в этом альбоме..." autocomplete="off" aria-label="Найти трек в этом альбоме"></label><div class="track-heading"><h3>Треки альбома</h3><span id="trackCount">0 TRACKS</span></div><div class="track-list" id="trackList"></div></div>
@@ -385,8 +385,8 @@ const elements = {
   scrim: document.getElementById("playlistScrim"),
   ambient: document.getElementById("playlistAmbient"),
   closePlaylist: document.getElementById("closePlaylist"),
-  downloadZip: document.getElementById("downloadZipBtn"),
-  downloadZipLabel: document.getElementById("downloadZipLabel"),
+  installFolder: document.getElementById("installFolderBtn"),
+  installFolderLabel: document.getElementById("installFolderLabel"),
   playlistCover: document.getElementById("playlistCover"),
   playlistCoverMosaic: document.getElementById("playlistCoverMosaic"),
   playlistCoverFallback: document.getElementById("playlistCoverFallback"),
@@ -450,8 +450,8 @@ let shuffleCyclePlayed = new Set();
 let previousVolume = 0.8;
 let isSeeking = false;
 let toastTimer = null;
-let zipDownloadActive = false;
-let zipDownloadToken = 0;
+let installDownloadActive = false;
+let installDownloadToken = 0;
 let audioReady = false;
 let audioContext = null;
 let audioAnalyser = null;
@@ -958,173 +958,115 @@ function showToast(message, type = "info") {
   }, 3100);
 }
 
-const ZIP_CRC_TABLE = (() => {
-  const table = new Uint32Array(256);
-  for (let n = 0; n < 256; n++) {
-    let value = n;
-    for (let bit = 0; bit < 8; bit++) value = value & 1 ? 0xedb88320 ^ (value >>> 1) : value >>> 1;
-    table[n] = value >>> 0;
-  }
-  return table;
-})();
-
-function zipCrc32(bytes) {
-  let crc = 0xffffffff;
-  for (let i = 0; i < bytes.length; i++) crc = ZIP_CRC_TABLE[(crc ^ bytes[i]) & 255] ^ (crc >>> 8);
-  return (crc ^ 0xffffffff) >>> 0;
-}
-
-function safeZipSegment(value) {
+function safeInstallSegment(value) {
   let result = String(value || "track").replace(/[<>:"\/\\|?*\u0000-\u001f]/g, "_").replace(/[. ]+$/g, "").trim();
   if (!result || result === "." || result === "..") result = "track";
   return result;
 }
 
-function zipTrackName(album, track) {
-  const fileName = safeZipSegment(track.fileName || track.title || "track");
-  if (!album.isAllTracks) return safeZipSegment(album.folder || album.title) + "/" + fileName;
+function getInstallTrackPath(album, track) {
+  const fileName = safeInstallSegment(track.fileName || track.title || "track");
+  if (!album.isAllTracks) return [fileName];
   const parts = String(track.path || "").split("/").filter(Boolean);
   const musicIndex = parts.findIndex(part => part.toLowerCase() === MUSIC_DIR.toLowerCase());
-  if (musicIndex >= 0 && parts.length > musicIndex + 1) return parts.slice(musicIndex + 1).map(safeZipSegment).join("/");
-  return safeZipSegment(track.albumTitle || "Album") + "/" + fileName;
+  if (musicIndex >= 0 && parts.length > musicIndex + 1) return parts.slice(musicIndex + 1).map(safeInstallSegment);
+  return [safeInstallSegment(track.albumTitle || "Album"), fileName];
 }
 
-function buildZipArchive(entries) {
-  if (!entries.length || entries.length > 65535) throw new Error("Неподдерживаемое количество файлов для ZIP-архива.");
-  const encoder = new TextEncoder();
-  const localParts = [];
-  const centralParts = [];
-  const now = new Date();
-  const dosTime = (now.getHours() << 11) | (now.getMinutes() << 5) | Math.floor(now.getSeconds() / 2);
-  const dosDate = ((Math.max(1980, now.getFullYear()) - 1980) << 9) | ((now.getMonth() + 1) << 5) | now.getDate();
-  let offset = 0;
-  for (const entry of entries) {
-    const name = encoder.encode(entry.name);
-    const bytes = entry.bytes;
-    if (name.length > 65535 || bytes.length > 0xffffffff || offset > 0xffffffff) throw new Error("ZIP-архив слишком большой.");
-    const crc = zipCrc32(bytes);
-    const local = new Uint8Array(30 + name.length);
-    const localView = new DataView(local.buffer);
-    localView.setUint32(0, 0x04034b50, true);
-    localView.setUint16(4, 20, true);
-    localView.setUint16(6, 0x0800, true);
-    localView.setUint16(8, 0, true);
-    localView.setUint16(10, dosTime, true);
-    localView.setUint16(12, dosDate, true);
-    localView.setUint32(14, crc, true);
-    localView.setUint32(18, bytes.length, true);
-    localView.setUint32(22, bytes.length, true);
-    localView.setUint16(26, name.length, true);
-    localView.setUint16(28, 0, true);
-    local.set(name, 30);
-    localParts.push(local, bytes);
-    const central = new Uint8Array(46 + name.length);
-    const centralView = new DataView(central.buffer);
-    centralView.setUint32(0, 0x02014b50, true);
-    centralView.setUint16(4, 0x0314, true);
-    centralView.setUint16(6, 20, true);
-    centralView.setUint16(8, 0x0800, true);
-    centralView.setUint16(10, 0, true);
-    centralView.setUint16(12, dosTime, true);
-    centralView.setUint16(14, dosDate, true);
-    centralView.setUint32(16, crc, true);
-    centralView.setUint32(20, bytes.length, true);
-    centralView.setUint32(24, bytes.length, true);
-    centralView.setUint16(28, name.length, true);
-    centralView.setUint16(30, 0, true);
-    centralView.setUint16(32, 0, true);
-    centralView.setUint16(34, 0, true);
-    centralView.setUint16(36, 0, true);
-    centralView.setUint32(38, 0, true);
-    centralView.setUint32(42, offset, true);
-    central.set(name, 46);
-    centralParts.push(central);
-    offset += local.length + bytes.length;
-    if (offset > 0xffffffff) throw new Error("ZIP-архив превышает ограничение формата.");
-  }
-  const centralSize = centralParts.reduce((sum, part) => sum + part.length, 0);
-  if (centralSize > 0xffffffff) throw new Error("ZIP-архив превышает ограничение формата.");
-  const end = new Uint8Array(22);
-  const endView = new DataView(end.buffer);
-  endView.setUint32(0, 0x06054b50, true);
-  endView.setUint16(4, 0, true);
-  endView.setUint16(6, 0, true);
-  endView.setUint16(8, entries.length, true);
-  endView.setUint16(10, entries.length, true);
-  endView.setUint32(12, centralSize, true);
-  endView.setUint32(16, offset, true);
-  endView.setUint16(20, 0, true);
-  return new Blob([...localParts, ...centralParts, end], { type: "application/zip" });
+async function getInstallDirectory(root, segments) {
+  let current = root;
+  for (const segment of segments) current = await current.getDirectoryHandle(segment, { create: true });
+  return current;
 }
 
-async function fetchZipTrack(track) {
+async function writeTrackToFolder(root, album, track) {
+  const segments = getInstallTrackPath(album, track);
+  const fileName = segments.pop();
+  const directory = await getInstallDirectory(root, segments);
+  const fileHandle = await directory.getFileHandle(fileName, { create: true });
   const sources = [...new Set([track.url, track.fallbackUrl].filter(Boolean))];
   let lastError = null;
   for (const source of sources) {
+    let writable = null;
     try {
-      const response = await fetch(source, { mode: "cors", credentials: "omit", cache: "force-cache", signal: AbortSignal.timeout(90000) });
+      const response = await fetch(source, {
+        mode: "cors",
+        credentials: "omit",
+        cache: "force-cache",
+        signal: AbortSignal.timeout(90000)
+      });
       if (!response.ok) throw new Error("HTTP " + response.status);
-      const bytes = new Uint8Array(await response.arrayBuffer());
-      if (!bytes.length) throw new Error("пустой файл");
-      return bytes;
+      if (!response.body) throw new Error("Браузер не поддерживает потоковую запись этого файла.");
+      writable = await fileHandle.createWritable();
+      await response.body.pipeTo(writable);
+      return;
     } catch (error) {
       lastError = error;
+      if (writable) await writable.abort().catch(() => {});
     }
   }
+  await directory.removeEntry(fileName).catch(() => {});
   throw new Error((track.fileName || track.title) + ": " + (lastError ? lastError.message : "источник недоступен"));
 }
 
-async function downloadAlbumZip(album) {
-  if (zipDownloadActive) return;
+async function installAlbumToFolder(album) {
+  if (installDownloadActive) return;
   if (!album || !Array.isArray(album.tracks) || !album.tracks.length) {
-    showToast("В этом разделе нет треков для скачивания.", "error");
+    showToast("В этом разделе нет треков для установки.", "error");
     return;
   }
-  const token = ++zipDownloadToken;
-  zipDownloadActive = true;
-  elements.downloadZip.disabled = true;
-  let completed = 0;
-  elements.downloadZipLabel.textContent = "Загрузка 0/" + album.tracks.length;
+  if (typeof window.showDirectoryPicker !== "function") {
+    showToast("Выбор папки поддерживается в Chrome и Edge. Открой GitWave в одном из этих браузеров.", "error");
+    return;
+  }
+  const token = ++installDownloadToken;
+  installDownloadActive = true;
+  elements.installFolder.disabled = true;
+  elements.installFolderLabel.textContent = "Выбор папки…";
   try {
-    const entries = new Array(album.tracks.length);
-    const failures = [];
+    const selectedDirectory = await window.showDirectoryPicker({
+      id: "gitwave-install-folder",
+      mode: "readwrite",
+      startIn: "downloads"
+    });
+    let permission = await selectedDirectory.queryPermission({ mode: "readwrite" });
+    if (permission !== "granted") permission = await selectedDirectory.requestPermission({ mode: "readwrite" });
+    if (permission !== "granted") throw new Error("Нет разрешения на запись в выбранную папку.");
+    const folderName = safeInstallSegment(album.isAllTracks ? "GitWave - Все треки" : album.folder || album.title);
+    const targetDirectory = await selectedDirectory.getDirectoryHandle(folderName, { create: true });
+    let completed = 0;
     let cursor = 0;
+    const failures = [];
+    elements.installFolderLabel.textContent = "0/" + album.tracks.length;
     const worker = async () => {
       while (true) {
         const index = cursor++;
         if (index >= album.tracks.length) return;
         const track = album.tracks[index];
         try {
-          const bytes = await fetchZipTrack(track);
-          entries[index] = { name: zipTrackName(album, track), bytes };
+          await writeTrackToFolder(targetDirectory, album, track);
         } catch (error) {
-          failures.push(error);
+          failures.push({ track, error });
         }
         completed++;
-        if (token === zipDownloadToken) elements.downloadZipLabel.textContent = "Загрузка " + completed + "/" + album.tracks.length;
+        if (token === installDownloadToken) elements.installFolderLabel.textContent = completed + "/" + album.tracks.length;
       }
     };
-    await Promise.all(Array.from({ length: Math.min(3, album.tracks.length) }, () => worker()));
-    if (failures.length) throw new Error("Не удалось скачать " + failures.length + " трек(ов): " + failures[0].message);
-    elements.downloadZipLabel.textContent = "Создание ZIP…";
-    const archive = buildZipArchive(entries);
-    const url = URL.createObjectURL(archive);
-    const link = document.createElement("a");
-    const baseName = safeZipSegment(album.isAllTracks ? "GitWave - Все треки" : album.folder || album.title);
-    link.href = url;
-    link.download = baseName + ".zip";
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    setTimeout(() => URL.revokeObjectURL(url), 60000);
-    showToast("ZIP-архив готов: " + album.tracks.length + " трек(ов).", "success");
+    await Promise.all(Array.from({ length: Math.min(4, album.tracks.length) }, () => worker()));
+    const installed = album.tracks.length - failures.length;
+    if (failures.length) {
+      const firstFailure = failures[0];
+      showToast("Сохранено " + installed + "/" + album.tracks.length + ". Ошибка: " + firstFailure.error.message, "error");
+    } else {
+      showToast("Готово! Файлы сохранены в папку «" + folderName + "».", "success");
+    }
   } catch (error) {
-    showToast(error.message || "Не удалось создать ZIP-архив.", "error");
+    if (error && error.name !== "AbortError") showToast(error.message || "Не удалось сохранить файлы в выбранную папку.", "error");
   } finally {
-    if (token === zipDownloadToken) {
-      zipDownloadActive = false;
-      elements.downloadZip.disabled = !viewedAlbum || !viewedAlbum.tracks.length;
-      elements.downloadZipLabel.textContent = viewedAlbum && viewedAlbum.isAllTracks ? "Скачать всё ZIP" : "Скачать ZIP";
+    if (token === installDownloadToken) {
+      installDownloadActive = false;
+      elements.installFolder.disabled = !viewedAlbum || !viewedAlbum.tracks.length;
+      elements.installFolderLabel.textContent = "Установить";
     }
   }
 }
@@ -1952,8 +1894,8 @@ function openAlbum(album) {
   elements.playlistTitle.textContent = album.title;
   elements.playlistMeta.textContent = album.isAllTracks ? `${pluralTracks(album.tracks.length)} · ${albums.length} альбомов` : `${pluralTracks(album.tracks.length)} · ${album.folder}`;
   elements.trackCount.textContent = `${album.tracks.length} TRACK${album.tracks.length === 1 ? "" : "S"}`;
-  elements.downloadZip.disabled = zipDownloadActive || !album.tracks.length;
-  elements.downloadZipLabel.textContent = album.isAllTracks ? "Скачать всё ZIP" : "Скачать ZIP";
+  elements.installFolder.disabled = installDownloadActive || !album.tracks.length;
+  elements.installFolderLabel.textContent = "Установить";
   renderPlaylistCover(album);
   const backgroundAlbum = album.isAllTracks ? (viewedActiveIndex >= 0 ? getTrackSourceAlbum(album, album.tracks[viewedActiveIndex]) : null) : album;
   setAmbientBackground(backgroundAlbum ? backgroundAlbum.background || repositoryAssets.background || backgroundAlbum.cover : repositoryAssets.background, backgroundAlbum);
@@ -2783,8 +2725,8 @@ elements.globalTrackResults.addEventListener("click", event => {
 elements.playlistSearch.addEventListener("input", renderTrackList);
 elements.emptyRetry.addEventListener("click", () => loadLibrary(true));
 elements.closePlaylist.addEventListener("click", closeAlbum);
-elements.downloadZip.addEventListener("click", () => {
-  if (viewedAlbum) downloadAlbumZip(viewedAlbum);
+elements.installFolder.addEventListener("click", () => {
+  if (viewedAlbum) installAlbumToFolder(viewedAlbum);
 });
 elements.scrim.addEventListener("click", closeAlbum);
 elements.playAll.addEventListener("click", () => {
