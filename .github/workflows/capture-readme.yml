@@ -8,6 +8,7 @@ on:
       - index.html
       - README.md
       - music/**
+      - .github/workflows/capture-readme.yml
   workflow_dispatch:
 
 permissions:
@@ -40,7 +41,6 @@ jobs:
           mkdir -p docs/screenshots /tmp/gitwave-gif-frames
           cat > capture-readme.cjs <<'EOF'
           const { chromium } = require(process.env.PLAYWRIGHT_PATH);
-          const fs = require('node:fs');
           (async () => {
             const browser = await chromium.launch({ headless: true });
             const page = await browser.newPage({ viewport: { width: 1440, height: 1000 }, deviceScaleFactor: 1 });
@@ -66,12 +66,11 @@ jobs:
             const max = Math.max(0, dimensions.height - dimensions.viewport);
             const frames = Math.max(12, Math.min(28, Math.ceil(max / 180) + 1));
             for (let i = 0; i < frames; i++) {
-              const position = frames === 1 ? max : Math.round(max * i / (frames - 1));
+              const position = Math.round(max * i / (frames - 1));
               await list.evaluate((el, value) => { el.scrollTop = value; }, position);
               await page.waitForTimeout(180);
               await page.screenshot({ path: '/tmp/gitwave-gif-frames/frame-' + String(i).padStart(3, '0') + '.png' });
             }
-            await page.waitForTimeout(700);
             await browser.close();
           })().catch(error => {
             console.error(error);
