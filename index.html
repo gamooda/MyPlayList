@@ -6,6 +6,8 @@
 <meta name="theme-color" content="#09090b">
 <meta name="description" content="Твоя музыкальная коллекция.">
 <title>gitwave</title>
+<link rel="icon" type="image/svg+xml" href="./ico-main/gitwave-icon.svg">
+<link rel="alternate icon" href="./ico-main/gitwave-icon.svg">
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="preconnect" href="https://raw.githubusercontent.com" crossorigin>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -22,9 +24,13 @@ body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;ba
 ::-webkit-scrollbar{width:8px;height:8px;background:#09090b}::-webkit-scrollbar-track{background:#09090b;border-radius:4px}::-webkit-scrollbar-thumb{background:#333338;border-radius:4px}::-webkit-scrollbar-thumb:hover{background:#4a4a50}button,input{font:inherit}button{color:inherit}button:focus-visible,input:focus-visible{outline:2px solid #a78bfa;outline-offset:3px}button{border:0}button:disabled{opacity:.35;cursor:not-allowed}
 .app{width:100%;max-width:1180px;margin:0 auto}
 .topbar{display:flex;justify-content:space-between;align-items:center;gap:18px;margin:0 auto 25px}
-.brand-lockup{display:flex;align-items:center;min-width:0}
-.brand-copy{display:flex;align-items:center}
-.brand-title{display:block;color:#e2e4e8;font-size:24px;font-weight:800;letter-spacing:-.7px;line-height:1}
+.brand-lockup{display:flex;align-items:center;gap:12px;min-width:0}
+.brand-emblem{width:46px;height:46px;display:grid;place-items:center;flex:none;border-radius:14px;background:linear-gradient(145deg,rgba(139,92,246,.18),rgba(24,24,27,.92));border:1px solid rgba(139,92,246,.3);box-shadow:0 5px 18px rgba(0,0,0,.28),inset 0 1px 0 rgba(255,255,255,.07)}
+.brand-emblem svg{width:31px;height:31px;display:block}.brand-logo{width:100%;height:100%;display:block;object-fit:contain;padding:5px;border-radius:12px}.brand-logo[hidden]{display:none}
+.brand-copy{display:flex;flex-direction:column;gap:0}
+.brand-name{font-size:23px;font-weight:800;letter-spacing:-.9px;line-height:1}
+.brand-name span{background:var(--primary-grad);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+.brand-subtitle{color:#777783;font-size:9px;letter-spacing:1.8px;font-weight:800;text-transform:uppercase}
 .top-actions{display:flex;align-items:center;gap:9px}
 .repo-link{height:38px;display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:0 13px;border:1px solid var(--border-light);border-radius:8px;background:rgba(24,24,27,.68);color:#c4c4cc;text-decoration:none;font-size:12px;font-weight:700;transition:all .22s ease;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
 .repo-link:hover{background:#23232b;border-color:#666;color:#fff;transform:translateY(-1px)}
@@ -274,10 +280,12 @@ body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;ba
 .track-list.grouped-tracks .track-title-wrap{gap:0}
 @media(max-width:680px){.track-group-heading{margin-top:10px;padding:9px 7px 7px}.track-group-title{font-size:10px}}
 
-.brand-title{display:block;color:#e2e4e8;font-size:24px;font-weight:800;letter-spacing:-.7px;line-height:1}
+.brand-wordmark{display:block;width:165px;height:40px;object-fit:contain;object-position:left center;filter:drop-shadow(0 2px 8px rgba(0,0,0,.24))}
+.brand-wordmark[hidden],.brand-wordmark-fallback[hidden]{display:none}
+.brand-wordmark-fallback{display:block;color:#e2e4e8;font-size:24px;font-weight:800;letter-spacing:-.7px;line-height:1}
 .all-tracks-art-icon{display:block;width:100%;height:100%;object-fit:cover;border-radius:9px}
 .all-tracks-art-icon[hidden]{display:none}
-@media(max-width:430px){.brand-title{font-size:21px}}
+@media(max-width:430px){.brand-wordmark{width:145px;height:35px}.brand-wordmark-fallback{font-size:21px}}
 
 .app-background-layer{position:fixed;inset:-3%;z-index:-2;pointer-events:none;background-position:center;background-size:cover;background-repeat:no-repeat;opacity:0;filter:blur(3px) brightness(.2) saturate(.9);transform:scale(1.075) translate3d(0,0,0);transition:opacity 1.85s cubic-bezier(.22,.61,.36,1),transform 5.6s cubic-bezier(.2,.7,.25,1);will-change:opacity,transform}
 .app-background-layer.is-active{opacity:.36;transform:scale(1.025) translate3d(0,-.4%,0)}
@@ -293,7 +301,9 @@ body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;ba
 <body>
 <div class="app">
 <header class="topbar">
-<div class="brand-lockup"><div class="brand-copy"><span class="brand-title">gitwave</span></div></div>
+<div class="brand-lockup">
+<div class="brand-copy"><img class="brand-wordmark" id="gitwaveLogo" alt="gitwave" hidden><span class="brand-wordmark-fallback" id="gitwaveFallback">gitwave</span></div>
+</div>
 <div class="top-actions">
 <a class="repo-link" id="repoLink" href="#" target="_blank" rel="noopener noreferrer" hidden><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 .9a11.1 11.1 0 0 0-3.51 21.63c.55.1.76-.24.76-.53v-2.07c-3.1.67-3.75-1.31-3.75-1.31-.5-1.29-1.24-1.64-1.24-1.64-1.01-.69.08-.68.08-.68 1.12.08 1.71 1.15 1.71 1.15 1 1.7 2.62 1.21 3.26.92.1-.72.39-1.21.71-1.49-2.47-.28-5.06-1.24-5.06-5.51 0-1.22.44-2.22 1.15-3-.12-.28-.5-1.43.11-2.98 0 0 .94-.3 3.05 1.14a10.6 10.6 0 0 1 5.55 0c2.11-1.44 3.05-1.14 3.05-1.14.61 1.55.23 2.7.12 2.98.71.78 1.14 1.78 1.14 3 0 4.28-2.59 5.22-5.07 5.5.4.35.76 1.03.76 2.08V22c0 .29.2.63.77.52A11.1 11.1 0 0 0 12 .9Z"/></svg>GitHub</a>
 <div class="repo-update-timer" id="repoUpdateTimer" title="Последнее изменение в GitHub-репозитории"><span class="repo-update-dot"></span><span id="repoUpdateText">Проверяем обновление…</span></div>
@@ -363,6 +373,8 @@ const elements = {
   repoUpdateTimer: document.getElementById("repoUpdateTimer"),
   repoUpdateText: document.getElementById("repoUpdateText"),
   repoLink: document.getElementById("repoLink"),
+  gitwaveLogo: document.getElementById("gitwaveLogo"),
+  gitwaveFallback: document.getElementById("gitwaveFallback"),
   overlay: document.getElementById("playlistOverlay"),
   playlistWindow: document.querySelector(".playlist-window"),
   scrim: document.getElementById("playlistScrim"),
@@ -404,7 +416,7 @@ let repository = resolveRepository();
 let repositoryBranch = null;
 let repositorySourcePath = "";
 let repositorySourceResolved = false;
-let repositoryAssets = { background: "", backgroundFallback: "", allTracksIcon: "", allTracksIconFallback: "" };
+let repositoryAssets = { background: "", backgroundFallback: "", gitwave: "", gitwaveFallback: "", allTracksIcon: "", allTracksIconFallback: "" };
 let durationCache = loadDurationCache();
 let durationScanGeneration = 0;
 let audioFallbackTimer = null;
@@ -717,7 +729,32 @@ function setPageBackground(url, fallbackUrl = "") {
   crossfadeBackground(document.body, url || "", fallbackUrl, "app");
 }
 
-function applyAlbumTheme(album) {
+function applyBrandLogo(url, fallbackUrl = "") {
+  const image = elements.gitwaveLogo;
+  const fallback = elements.gitwaveFallback;
+  if (!image || !fallback) return;
+  if (!url) {
+    image.hidden = true;
+    image.removeAttribute("src");
+    fallback.hidden = false;
+    return;
+  }
+  image.hidden = false;
+  fallback.hidden = true;
+  image.dataset.fallbackUsed = "0";
+  image.onerror = () => {
+    if (fallbackUrl && image.dataset.fallbackUsed !== "1") {
+      image.dataset.fallbackUsed = "1";
+      image.src = fallbackUrl;
+    } else {
+      image.hidden = true;
+      fallback.hidden = false;
+    }
+  };
+  image.src = url;
+}
+
+
   const palette = album && validPalette(album.palette) ? album.palette : DEFAULT_PALETTE;
   const colors = paletteCss(palette);
   document.documentElement.style.setProperty("--active-rgb", colors.main);
@@ -1003,6 +1040,8 @@ function readCache(allowExpired = false) {
   repositoryAssets = {
     background: cachedAssets.background || "",
     backgroundFallback: cachedAssets.backgroundFallback || "",
+    gitwave: cachedAssets.gitwave || "",
+    gitwaveFallback: cachedAssets.gitwaveFallback || "",
     allTracksIcon: cachedAssets.allTracksIcon || "",
     allTracksIconFallback: cachedAssets.allTracksIconFallback || ""
   };
@@ -1111,6 +1150,7 @@ function findNamedPng(files, name) {
 }
 
 function applyLibraryAssets() {
+  applyBrandLogo(repositoryAssets.gitwave, repositoryAssets.gitwaveFallback);
   if (!currentAlbum) applyAlbumTheme(null);
 }
 
@@ -1212,7 +1252,13 @@ function makeAlbumRecord(directoryName, directoryPath, files) {
 }
 
 function setLibraryIconsFromFiles(files) {
+  const gitwave = files.find(file => file.type === "file" && file.name.toLowerCase() === "gitwave.svg");
   const allTracksIcon = files.find(file => file.type === "file" && file.name.toLowerCase() === "all_tracks.svg") || files.find(file => file.type === "file" && file.name.toLowerCase() === "all_tacks.svg");
+  if (gitwave) {
+    const media = imageMediaUrls(gitwave.path, gitwave.download_url || "", gitwave.sha || "");
+    repositoryAssets.gitwave = media.url;
+    repositoryAssets.gitwaveFallback = media.fallbackUrl;
+  }
   if (allTracksIcon) {
     const media = imageMediaUrls(allTracksIcon.path, allTracksIcon.download_url || "", allTracksIcon.sha || "");
     repositoryAssets.allTracksIcon = media.url;
@@ -1241,7 +1287,7 @@ async function setLibraryIconsFromContents() {
       const files = await githubRequest(folder);
       if (Array.isArray(files)) {
         setLibraryIconsFromFiles(files);
-        if (repositoryAssets.allTracksIcon) return;
+        if (repositoryAssets.gitwave && repositoryAssets.allTracksIcon) return;
       }
     } catch (error) {
       continue;
@@ -1250,7 +1296,7 @@ async function setLibraryIconsFromContents() {
 }
 
 function assetsFromRootFiles(files) {
-  repositoryAssets = { background: "", backgroundFallback: "", allTracksIcon: repositoryAssets.allTracksIcon || "", allTracksIconFallback: repositoryAssets.allTracksIconFallback || "" };
+  repositoryAssets = { background: "", backgroundFallback: "", gitwave: repositoryAssets.gitwave || "", gitwaveFallback: repositoryAssets.gitwaveFallback || "", allTracksIcon: repositoryAssets.allTracksIcon || "", allTracksIconFallback: repositoryAssets.allTracksIconFallback || "" };
   const rootBackground = findNamedPng(files, "background");
   if (rootBackground) {
     const media = imageMediaUrls(rootBackground.path, rootBackground.download_url || "", rootBackground.sha || "");
@@ -1427,8 +1473,8 @@ function refreshAlbumMediaFromTree(albumList, tree) {
   });
 }
 
-async function ensureLibraryIcons(force = false) {
-  if (!force && repositoryAssets.allTracksIcon) return;
+async function ensureBrandAssets(force = false) {
+  if (!force && repositoryAssets.gitwave && repositoryAssets.allTracksIcon) return;
   try {
     const treeData = await fetchRepositoryTree();
     if (treeData && !treeData.truncated) {
@@ -1436,10 +1482,11 @@ async function ensureLibraryIcons(force = false) {
       if (force) refreshAlbumMediaFromTree(albums, treeData.tree);
     }
   } catch (error) {
+    repositoryAssets.gitwave = repositoryAssets.gitwave || "";
     repositoryAssets.allTracksIcon = repositoryAssets.allTracksIcon || "";
   }
-  if (!repositoryAssets.allTracksIcon) await setLibraryIconsFromContents();
-  if (repositoryAssets.allTracksIcon) writeCache(albums);
+  if (!repositoryAssets.gitwave || !repositoryAssets.allTracksIcon) await setLibraryIconsFromContents();
+  if (repositoryAssets.gitwave || repositoryAssets.allTracksIcon) writeCache(albums);
 }
 
 async function loadLibrary(force = false) {
@@ -1463,7 +1510,7 @@ async function loadLibrary(force = false) {
     }
     albums = result;
     buildAllTracksAlbum();
-    await ensureLibraryIcons(fromCache);
+    await ensureBrandAssets(fromCache);
     applyLibraryAssets();
     renderAlbums();
     setStatus("ready", fromCache ? "Библиотека из кэша" : "Библиотека синхронизирована");
